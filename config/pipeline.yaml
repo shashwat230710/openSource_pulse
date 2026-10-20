@@ -1,0 +1,71 @@
+# Open-Source Pulse Pipeline Configuration
+# Predicting trending GitHub repositories early with Spark, Parquet, GraphFrames, and MLlib
+
+pipeline:
+  name: "open-source-pulse"
+  version: "1.0.0"
+  timezone: "UTC"
+
+data_window:
+  # Tier selection: T0 (1 week fixture), T1 (3 months), T2 (12-18 months)
+  active_tier: "T1"
+  tiers:
+    T0:
+      start_date: "2024-01-01"
+      end_date: "2024-01-07"
+      description: "1-week validation fixture & schema profiling"
+    T1:
+      start_date: "2024-01-01"
+      end_date: "2024-03-31"
+      description: "3-month laptop baseline & end-to-end model"
+    T2:
+      start_date: "2023-01-01"
+      end_date: "2024-06-30"
+      description: "18-month primary production & backtest window"
+
+paths:
+  raw: "data/raw"
+  bronze: "data/bronze/events"
+  silver: "data/silver/events"
+  gold_day: "data/gold/repo_day"
+  gold_week: "data/gold/repo_week"
+  gold_features: "data/gold/features"
+  gold_graph: "data/gold/graph"
+  serving_scores: "data/serving/scores"
+  benchmarks: "benchmarks/results.csv"
+
+candidate_criteria:
+  min_cumulative_stars: 20
+  max_cumulative_stars: 300
+  max_repo_age_weeks: 26
+  must_be_created_in_window: true
+
+label_definition:
+  forecast_horizon_weeks: 4  # ~30 days ahead
+  breakout_star_gain_threshold: 500  # >= 500 stars gained in next 4 weeks
+
+time_splits:
+  embargo_gap_weeks: 4  # Strict 4-week gap to prevent label window overlap leakage
+  t1_week_num: 1250    # Train cut
+  t2_week_num: 1262    # Validation cut
+
+graph_analytics:
+  max_stargazer_stars: 200     # Prunes bots & star collectors to prevent quadratic blow-up
+  min_edge_shared_stars: 3    # Co-star edge weight floor
+  pagerank_reset_prob: 0.15   # PageRank alpha (1 - damping factor)
+  pagerank_max_iter: 10
+  label_propagation_max_iter: 5
+  window_days: 60             # Graph snapshot rolling window
+
+spark_config:
+  master: "local[*]"
+  driver_memory: "12g"
+  sql_session_timezone: "UTC"
+  shuffle_partitions: 200
+  adaptive_enabled: true
+  adaptive_coalesce_partitions: true
+  adaptive_skew_join: true
+  auto_broadcast_join_threshold: "64m"
+  max_partition_bytes: 134217728
+  parquet_compression_codec: "zstd"
+  partition_overwrite_mode: "dynamic"
