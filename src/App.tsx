@@ -20,7 +20,6 @@ import {
   Activity,
   Star,
   BookMarked,
-  Eye,
   Sliders,
   FileText,
   Check,
@@ -28,9 +27,10 @@ import {
   ArrowRight,
   TrendingUp,
   AlertTriangle,
-  Info,
-  Calendar,
-  Code2
+  Code2,
+  ChevronRight,
+  Radio,
+  Filter
 } from 'lucide-react';
 import {
   REPOSITORY_CANDIDATES,
@@ -39,29 +39,28 @@ import {
   MODEL_COMPARISONS,
   GRAPH_NODES,
   GRAPH_EDGES,
-  RepoSnapshot,
-  GraphNode
+  RepoSnapshot
 } from './data/pulseData';
 
 type TabType =
-  | 'repositories'
-  | 'intelligence'
+  | 'predictions'
+  | 'signals'
   | 'graph'
   | 'funnel'
   | 'benchmarks'
-  | 'actions'
   | 'simulator'
-  | 'readme';
+  | 'pipeline'
+  | 'architecture';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('repositories');
+  const [activeTab, setActiveTab] = useState<TabType>('predictions');
   const [selectedRepo, setSelectedRepo] = useState<RepoSnapshot>(REPOSITORY_CANDIDATES[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [sortBy, setSortBy] = useState<'score' | 'stars_cum' | 'growth_ratio' | 'fork_star_ratio'>('score');
   const [sortAsc, setSortAsc] = useState(false);
 
-  // Starred repos local state
+  // Starred repos local toggle
   const [starredRepos, setStarredRepos] = useState<Record<number, boolean>>({});
   const toggleStar = (id: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -71,21 +70,20 @@ export default function App() {
   // Graph state
   const [minEdgeWeight, setMinEdgeWeight] = useState(15);
 
-  // Pipeline Actions runner execution state
+  // Pipeline execution state
   const [pipelineTier, setPipelineTier] = useState<'T0' | 'T1' | 'T2'>('T0');
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
   const [activeStepIndex, setActiveStepIndex] = useState(-1);
   const [pipelineCompleted, setPipelineCompleted] = useState(true);
   const [pipelineLogs, setPipelineLogs] = useState<string[]>([
-    '[2024-03-15T08:00:00Z] Pipeline initialized: workflow_dispatch triggered on runner local[8]',
-    '[2024-03-15T08:00:01Z] Spark 3.5.1 session active with driver-memory=12g, AQE=true, codec=zstd',
-    '[2024-03-15T08:00:01Z] Phase 1: Downloaded and verified 24 hourly GH Archive .json.gz segments',
-    '[2024-03-15T08:00:02Z] Phase 2: Bronze Parquet partitioned by dt. Filtered 6 event types (Watch, Fork, Create, PR, Issue, Push)',
-    '[2024-03-15T08:00:02Z] Phase 3: Silver bot filter removed automated runners; first-star deduplication applied',
-    '[2024-03-15T08:00:03Z] Phase 4: Gold repo-day aggregation collapsed 342M events to 8.42M rows (99.4% reduction)',
-    '[2024-03-15T08:00:03Z] Phase 7: GraphFrames co-star graph computed with degree-cap guard (>200 stars dropped)',
-    '[2024-03-15T08:00:04Z] Phase 8: MLlib GBTClassifier evaluated (PR-AUC: 0.614, Precision@20: 80.0%, 3.4 wk lead time)',
-    '[2024-03-15T08:00:04Z] Phase 10: Serving scores written to data/serving/scores/*.parquet; sub-15ms DuckDB queries ready'
+    '[INIT] Spark 3.5.1 driver active on local[8] with 12GB heap and AQE enabled',
+    '[STAGE 1] Ingested 24 hourly GH Archive .json.gz segments',
+    '[STAGE 2] Bronze Parquet written (390M filtered events, zstd dictionary codec)',
+    '[STAGE 3] Cleaned silver layer: filtered bot accounts (Renovate, Dependabot, Actions); deduplicated first-stars',
+    '[STAGE 4] Gold rollups: pre-aggregated repo-day table (8.42M rows) and sparse repo-week',
+    '[STAGE 5] GraphFrames co-star graph computed; PageRank and community momentum generated',
+    '[STAGE 6] Trained MLlib GBTClassifier (depth=6, maxIter=120) with 4-week embargo gap',
+    '[STAGE 7] Materialized weekly predictions to data/serving/scores/*.parquet; sub-15ms DuckDB queries ready'
   ]);
 
   // AI intelligence state
@@ -93,13 +91,13 @@ export default function App() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   // Interactive Live Simulator state
-  const [simName, setSimName] = useState('my-org/next-gen-agent');
-  const [simStarsCum, setSimStarsCum] = useState(140);
-  const [simStarsW0, setSimStarsW0] = useState(72);
-  const [simStarsW1, setSimStarsW1] = useState(18);
+  const [simName, setSimName] = useState('agent-infra/autonomous-runtime');
+  const [simStarsCum, setSimStarsCum] = useState(145);
+  const [simStarsW0, setSimStarsW0] = useState(68);
+  const [simStarsW1, setSimStarsW1] = useState(16);
   const [simForkRatio, setSimForkRatio] = useState(0.24);
-  const [simBurstiness, setSimBurstiness] = useState(0.21);
-  const [simPrsMerged, setSimPrsMerged] = useState(26);
+  const [simBurstiness, setSimBurstiness] = useState(0.22);
+  const [simPrsMerged, setSimPrsMerged] = useState(24);
   const [simPagerank, setSimPagerank] = useState(0.082);
 
   // Simulation calculation
@@ -232,7 +230,7 @@ export default function App() {
     });
   }, [searchQuery, categoryFilter, sortBy, sortAsc]);
 
-  // Pipeline stages definition for the Actions workflow DAG
+  // Pipeline stages definition
   const pipelineStages = [
     {
       id: 'acquire',
@@ -285,16 +283,16 @@ export default function App() {
     }
   ];
 
-  // Execute pipeline runner in Actions view
+  // Execute pipeline runner
   const startPipelineExecution = () => {
-    setActiveTab('actions');
+    setActiveTab('pipeline');
     setIsPipelineRunning(true);
     setPipelineCompleted(false);
     setActiveStepIndex(0);
-    const nowIso = new Date().toISOString();
+    const nowIso = new Date().toISOString().substring(11, 19);
     setPipelineLogs([
-      `[${nowIso}] Triggering GitHub Actions workflow: open-source-pulse.yml (Tier: ${pipelineTier})`,
-      `[${nowIso}] Allocated runner: ubuntu-latest (8 cores, 12GB memory, PySpark 3.5.1)`
+      `[${nowIso}] Triggering Spark Engine workflow (Tier: ${pipelineTier})`,
+      `[${nowIso}] Driver session allocated on local[8] (12GB heap, AQE=true)`
     ]);
 
     const stepLogs = [
@@ -311,7 +309,7 @@ export default function App() {
     const interval = setInterval(() => {
       if (currentStep < pipelineStages.length) {
         setActiveStepIndex(currentStep);
-        const logTime = new Date().toISOString();
+        const logTime = new Date().toISOString().substring(11, 19);
         setPipelineLogs(prev => [...prev, `[${logTime}] ${stepLogs[currentStep]}`]);
         currentStep++;
       } else {
@@ -319,7 +317,7 @@ export default function App() {
         setIsPipelineRunning(false);
         setPipelineCompleted(true);
         setActiveStepIndex(pipelineStages.length);
-        const finishTime = new Date().toISOString();
+        const finishTime = new Date().toISOString().substring(11, 19);
         setPipelineLogs(prev => [
           ...prev,
           `[${finishTime}] Workflow complete: All 7 jobs succeeded in 2.16s! DuckDB serving partition updated.`
@@ -355,283 +353,193 @@ export default function App() {
   }, [minEdgeWeight]);
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#0a0d14] text-[#e2e8f0] flex flex-col font-sans selection:bg-sky-500/30">
       {/* ------------------------------------------------------------- */}
-      {/* 1. GITHUB TOP GLOBAL NAVIGATION BAR                           */}
+      {/* 1. CLEAN HUMAN-CRAFTED APP HEADER (NO FAKE GITHUB BUTTONS!)   */}
       {/* ------------------------------------------------------------- */}
-      <header className="border-b border-[#30363d] bg-[#161b22] sticky top-0 z-40 text-sm">
-        <div className="max-w-[1440px] mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          {/* Left: GitHub Octocat Logo & Repo Breadcrumb */}
+      <header className="border-b border-slate-800/80 bg-[#0e121b]/95 backdrop-blur sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
+          {/* Brand Mark */}
           <div className="flex items-center gap-3 shrink-0">
-            {/* GitHub Octocat Mark SVG */}
-            <a
-              href="#"
-              onClick={e => {
-                e.preventDefault();
-                setActiveTab('repositories');
-              }}
-              className="text-white hover:opacity-80 transition-opacity"
-              title="GitHub Open-Source Pulse"
-            >
-              <svg height="32" viewBox="0 0 16 16" version="1.1" width="32" fill="currentColor">
-                <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z" />
-              </svg>
-            </a>
-
-            {/* Breadcrumb: apache-spark / open-source-pulse */}
-            <div className="flex items-center gap-1.5 text-sm">
-              <span className="text-[#58a6ff] hover:underline cursor-pointer">apache-spark</span>
-              <span className="text-[#8b949e]">/</span>
-              <span className="font-semibold text-[#e6edf3] hover:underline cursor-pointer">
-                open-source-pulse
-              </span>
-              <span className="ml-1.5 text-[11px] px-2 py-0.5 rounded-full border border-[#30363d] text-[#8b949e] font-medium leading-none">
-                Public
-              </span>
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-sky-600 flex items-center justify-center shadow-lg shadow-emerald-950/40">
+              <Activity className="w-5 h-5 text-white stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                <span>Open-Source Pulse</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400 font-semibold">
+                  v2.4
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 font-mono">
+                Predictive Big Data Lakehouse · Spark 3.5 &amp; MLlib
+              </div>
             </div>
           </div>
 
-          {/* Center: GitHub Search Input */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-2">
-            <div className="relative w-full">
-              <Search className="w-3.5 h-3.5 text-[#8b949e] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Type / to search repositories, models, or topics..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-md pl-8 pr-8 py-1 text-xs text-[#e6edf3] placeholder-[#8b949e] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#8b949e] border border-[#30363d] px-1 rounded font-mono">
-                /
-              </span>
-            </div>
-          </div>
-
-          {/* Right: GitHub Action Buttons & Profile */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Watch count */}
-            <div className="hidden sm:inline-flex items-center border border-[#30363d] rounded-md bg-[#21262d] text-xs font-medium text-[#e6edf3] overflow-hidden">
-              <button className="px-2.5 py-1 hover:bg-[#30363d] transition-colors flex items-center gap-1.5 cursor-pointer">
-                <Eye className="w-3.5 h-3.5 text-[#8b949e]" />
-                <span>Watch</span>
-              </button>
-              <span className="px-2 py-1 bg-[#161b22] border-l border-[#30363d] text-[11px] text-[#8b949e] font-mono">
-                94
-              </span>
-            </div>
-
-            {/* Fork count */}
-            <div className="hidden sm:inline-flex items-center border border-[#30363d] rounded-md bg-[#21262d] text-xs font-medium text-[#e6edf3] overflow-hidden">
-              <button className="px-2.5 py-1 hover:bg-[#30363d] transition-colors flex items-center gap-1.5 cursor-pointer">
-                <GitFork className="w-3.5 h-3.5 text-[#8b949e]" />
-                <span>Fork</span>
-              </button>
-              <span className="px-2 py-1 bg-[#161b22] border-l border-[#30363d] text-[11px] text-[#8b949e] font-mono">
-                312
-              </span>
-            </div>
-
-            {/* Interactive Star button */}
+          {/* Clean Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-1 bg-[#131824] p-1 rounded-lg border border-slate-800/80 text-xs">
             <button
-              onClick={() => toggleStar(9999)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-[#30363d] transition-colors cursor-pointer ${
-                starredRepos[9999]
-                  ? 'bg-[#21262d] text-[#e3b341] border-[#e3b341]/40'
-                  : 'bg-[#21262d] text-[#e6edf3] hover:bg-[#30363d]'
+              onClick={() => setActiveTab('predictions')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer ${
+                activeTab === 'predictions'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
-              <Star className={`w-3.5 h-3.5 ${starredRepos[9999] ? 'fill-current' : 'text-[#8b949e]'}`} />
-              <span>{starredRepos[9999] ? 'Starred' : 'Star'}</span>
-              <span className="ml-1 text-[11px] text-[#8b949e] font-mono">1.8k</span>
+              Breakout Radar ({filteredRepos.length})
             </button>
 
-            {/* GitHub Green Run Workflow Button (Switches to Actions tab without black screens) */}
+            <button
+              onClick={() => setActiveTab('signals')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer ${
+                activeTab === 'signals'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Deep Signals
+            </button>
+
+            <button
+              onClick={() => setActiveTab('graph')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer ${
+                activeTab === 'graph'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Co-Star Network
+            </button>
+
+            <button
+              onClick={() => setActiveTab('funnel')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer ${
+                activeTab === 'funnel'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Lakehouse Funnel
+            </button>
+
+            <button
+              onClick={() => setActiveTab('benchmarks')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer ${
+                activeTab === 'benchmarks'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Benchmarks (E1-E9)
+            </button>
+
+            <button
+              onClick={() => setActiveTab('simulator')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'simulator'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-400 hover:text-amber-300 hover:bg-slate-800/50'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Simulator
+            </button>
+
+            <button
+              onClick={() => setActiveTab('architecture')}
+              className={`px-3 py-1.5 rounded-md transition-all font-medium whitespace-nowrap cursor-pointer ${
+                activeTab === 'architecture'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Architecture &amp; Docs
+            </button>
+          </nav>
+
+          {/* Right Action: Run Pipeline Button */}
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={startPipelineExecution}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold text-white bg-[#238636] hover:bg-[#2ea043] border border-[rgba(240,246,252,0.1)] transition-colors shadow-sm cursor-pointer whitespace-nowrap"
-              title="Execute Apache Spark Pipeline Engine"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/50 transition-all flex items-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
             >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Run Pipeline</span>
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Run Spark Pipeline</span>
             </button>
           </div>
         </div>
 
-        {/* ------------------------------------------------------------- */}
-        {/* 2. GITHUB REPOSITORY SUBHEADER TABS                           */}
-        {/* ------------------------------------------------------------- */}
-        <div className="max-w-[1440px] mx-auto px-4 overflow-x-auto">
-          <nav className="flex items-center gap-1 text-xs font-medium text-[#8b949e] border-t border-[#21262d] pt-1">
-            {/* Tab 1: Repositories (Trending Breakouts) */}
+        {/* Mobile Navigation Sub-bar */}
+        <div className="lg:hidden flex items-center gap-1 overflow-x-auto px-4 py-2 border-t border-slate-800 text-xs bg-[#0b0f17]">
+          {(['predictions', 'signals', 'graph', 'funnel', 'benchmarks', 'simulator', 'architecture'] as TabType[]).map(tab => (
             <button
-              onClick={() => setActiveTab('repositories')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'repositories'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-2.5 py-1 rounded whitespace-nowrap capitalize ${
+                activeTab === tab ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400'
               }`}
             >
-              <BookMarked className="w-4 h-4 text-[#8b949e]" />
-              <span>Repositories</span>
-              <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-[#30363d] text-[#e6edf3] font-mono">
-                {filteredRepos.length}
-              </span>
+              {tab === 'predictions' ? 'Radar' : tab}
             </button>
-
-            {/* Tab 2: Repository Intelligence */}
-            <button
-              onClick={() => setActiveTab('intelligence')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'intelligence'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-[#8b949e]" />
-              <span>Deep Intelligence</span>
-            </button>
-
-            {/* Tab 3: Graph Ecosystem */}
-            <button
-              onClick={() => setActiveTab('graph')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'graph'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <Network className="w-4 h-4 text-[#8b949e]" />
-              <span>Graph Ecosystem</span>
-            </button>
-
-            {/* Tab 4: Lakehouse Funnel */}
-            <button
-              onClick={() => setActiveTab('funnel')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'funnel'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <Layers className="w-4 h-4 text-[#8b949e]" />
-              <span>Lakehouse Funnel</span>
-              <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-[#30363d] text-[#3fb950] font-mono">
-                -99.99%
-              </span>
-            </button>
-
-            {/* Tab 5: Benchmarks & Ablation */}
-            <button
-              onClick={() => setActiveTab('benchmarks')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'benchmarks'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4 text-[#8b949e]" />
-              <span>Benchmarks & MLlib</span>
-            </button>
-
-            {/* Tab 6: Actions (Pipeline Workflow Runner) */}
-            <button
-              onClick={() => setActiveTab('actions')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'actions'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <Terminal className="w-4 h-4 text-[#3fb950]" />
-              <span>Actions Workflow</span>
-              {pipelineCompleted && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#3fb950]" />
-              )}
-            </button>
-
-            {/* Tab 7: Live Simulator (NEW FEATURE) */}
-            <button
-              onClick={() => setActiveTab('simulator')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'simulator'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <Zap className="w-4 h-4 text-[#d29922]" />
-              <span>Live Simulator</span>
-            </button>
-
-            {/* Tab 8: README.md */}
-            <button
-              onClick={() => setActiveTab('readme')}
-              className={`flex items-center gap-2 px-3 py-2.5 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'readme'
-                  ? 'border-[#fd8c73] text-[#e6edf3] font-semibold'
-                  : 'border-transparent hover:text-[#e6edf3] hover:border-[#8b949e]'
-              }`}
-            >
-              <FileText className="w-4 h-4 text-[#8b949e]" />
-              <span>README.md</span>
-            </button>
-          </nav>
+          ))}
         </div>
       </header>
 
       {/* ------------------------------------------------------------- */}
-      {/* 3. GITHUB REPOSITORY BANNER STRIP                             */}
+      {/* 2. CONTEXTUAL METRICS KPI STRIP                               */}
       {/* ------------------------------------------------------------- */}
-      <section className="bg-[#161b22] border-b border-[#30363d] py-3 text-xs text-[#8b949e]">
-        <div className="max-w-[1440px] mx-auto px-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-[#e6edf3] font-medium">
-              <span className="w-2 h-2 rounded-full bg-[#3fb950]" />
-              GH Archive 18-Month Continuous Stream
+      <section className="bg-[#0f1420]/80 border-b border-slate-800/60 py-3 text-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-slate-400">
+            <span className="flex items-center gap-1.5 text-slate-200 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              GH Archive Ingest Stream
             </span>
             <span>·</span>
-            <span>Candidate Filter: 20–300 Stars, Age &le; 26w</span>
+            <span>Target: &ge; 500 Stars in 30 Days</span>
             <span>·</span>
-            <span className="text-[#e6edf3]">Target: &ge; 500 Stars in 30 Days</span>
+            <span className="text-slate-300">Candidate Band: 20–300 Stars, Age &le; 26w</span>
           </div>
 
-          <div className="flex items-center gap-4 font-mono text-[11px] tabular-nums">
+          <div className="flex items-center gap-5 text-slate-400 font-mono text-[11px] tabular-nums">
             <span>
-              Precision@20: <strong className="text-[#3fb950] font-semibold">80.0%</strong>
+              Precision@20: <strong className="text-emerald-400 font-bold">80.0%</strong>
             </span>
             <span>·</span>
             <span>
-              Avg Early Lead Time: <strong className="text-[#58a6ff] font-semibold">+3.4 weeks</strong>
+              Early Lead Time: <strong className="text-sky-400 font-bold">+3.4 weeks</strong>
             </span>
             <span>·</span>
-            <span className="text-[#8b949e]">
-              Data Leakage Guard: <strong className="text-[#e6edf3]">4-Wk Embargo</strong>
+            <span>
+              Temporal Leakage Guard: <strong className="text-slate-200">4-Wk Embargo</strong>
             </span>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* 4. MAIN WORKSPACE / VIEWS                                     */}
+      {/* 3. MAIN WORKSPACE / VIEWS                                     */}
       {/* ------------------------------------------------------------- */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 1: REPOSITORIES (GITHUB TRENDING / EXPLORE STYLE)         */}
+        {/* VIEW 1: PREDICTIONS (GITHUB THEMED MIDDLE REPO BOXES)         */}
+        {/* ONLY THE MIDDLE BOXES CONTAINING REPOS HAVE GITHUB THEME      */}
         {/* ------------------------------------------------------------- */}
-        {activeTab === 'repositories' && (
-          <div className="space-y-4">
-            {/* GitHub Header Filter Toolbar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#161b22] border border-[#30363d] rounded-md p-3">
-              {/* Category / Language Segmented Buttons */}
+        {activeTab === 'predictions' && (
+          <div className="space-y-5">
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111624] border border-slate-800 rounded-xl p-3.5 shadow-sm">
+              {/* Category Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs">
                 {categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setCategoryFilter(cat)}
-                    className={`px-2.5 py-1 rounded-md text-xs transition-colors whitespace-nowrap cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer ${
                       categoryFilter === cat
-                        ? 'bg-[#30363d] text-[#e6edf3] font-semibold'
-                        : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+                        ? 'bg-slate-800 text-white font-semibold border border-slate-700'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                     }`}
                   >
                     {cat}
@@ -639,45 +547,56 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Sort selector */}
-              <div className="flex items-center gap-2 text-xs shrink-0">
-                <span className="text-[#8b949e]">Sort by:</span>
+              {/* Search & Sort Controls */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search repos or languages..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="bg-[#0b0e17] border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 w-48 sm:w-60"
+                  />
+                </div>
+
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as any)}
-                  className="bg-[#0d1117] border border-[#30363d] text-[#e6edf3] rounded-md px-2.5 py-1 text-xs focus:outline-none focus:border-[#58a6ff]"
+                  className="bg-[#0b0e17] border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-sky-500"
                 >
-                  <option value="score">Breakout Probability (High to Low)</option>
-                  <option value="stars_cum">Current Stars</option>
-                  <option value="growth_ratio">Weekly Growth Velocity</option>
-                  <option value="fork_star_ratio">Fork-to-Star Conversion</option>
+                  <option value="score">Sort: Breakout Score</option>
+                  <option value="stars_cum">Sort: Current Stars</option>
+                  <option value="growth_ratio">Sort: Growth Velocity</option>
+                  <option value="fork_star_ratio">Sort: Fork Ratio</option>
                 </select>
               </div>
             </div>
 
-            {/* GitHub Repository List Container */}
-            <div className="border border-[#30363d] rounded-md bg-[#0d1117] divide-y divide-[#30363d]">
-              {filteredRepos.map((repo, idx) => {
-                const isHighProb = repo.score >= 0.70;
+            {/* ------------------------------------------------------------- */}
+            {/* GITHUB-THEMED REPOSITORY BOXES (AS REQUESTED)                 */}
+            {/* ------------------------------------------------------------- */}
+            <div className="space-y-3">
+              {filteredRepos.map(repo => {
+                const isHighProb = repo.score >= 0.7;
                 const isSpam = repo.burstiness >= 0.85 && repo.fork_star_ratio < 0.05;
                 const isStarred = starredRepos[repo.repo_id];
 
                 return (
                   <div
                     key={repo.repo_id}
-                    className="p-5 hover:bg-[#161b22]/50 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-4"
+                    className="border border-[#30363d] bg-[#0d1117] rounded-md p-4 transition-all duration-150 hover:border-[#8b949e]/60 text-left shadow-sm font-sans"
                   >
-                    {/* Left: Repository info */}
-                    <div className="space-y-2 flex-1">
-                      {/* Title row */}
+                    {/* Top Row: Repo Title + Public Badge + Star Button */}
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <BookMarked className="w-4 h-4 text-[#8b949e] shrink-0" />
                         <button
                           onClick={() => {
                             setSelectedRepo(repo);
-                            setActiveTab('intelligence');
+                            setActiveTab('signals');
                           }}
-                          className="text-base font-semibold text-[#58a6ff] hover:underline text-left cursor-pointer"
+                          className="text-base font-semibold text-[#58a6ff] hover:underline cursor-pointer"
                         >
                           {repo.repo_name}
                         </button>
@@ -687,42 +606,60 @@ export default function App() {
                         </span>
 
                         {repo.is_breakout && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#238636]/20 border border-[#238636]/40 text-[#3fb950] font-semibold flex items-center gap-1 font-mono">
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#238636]/20 border border-[#238636]/40 text-[#3fb950] font-semibold flex items-center gap-1 font-mono">
                             <Flame className="w-3 h-3" />
                             Breakout Confirmed (+{repo.actual_stars_next_4w} stars)
                           </span>
                         )}
 
                         {isSpam && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#da3633]/20 border border-[#da3633]/40 text-[#f85149] font-semibold flex items-center gap-1 font-mono">
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#da3633]/20 border border-[#da3633]/40 text-[#f85149] font-semibold flex items-center gap-1 font-mono">
                             <AlertTriangle className="w-3 h-3" />
-                            Spam Campaign Guard
+                            Spam Burstiness Guard
                           </span>
                         )}
                       </div>
 
-                      {/* Description */}
-                      <p className="text-xs text-[#8b949e] leading-relaxed max-w-4xl">
-                        {repo.description}
-                      </p>
+                      {/* GitHub Star Button on Card */}
+                      <button
+                        onClick={e => toggleStar(repo.repo_id, e)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-[#30363d] transition-colors cursor-pointer shrink-0 ${
+                          isStarred
+                            ? 'bg-[#21262d] text-[#e3b341] border-[#e3b341]/50'
+                            : 'bg-[#21262d] text-[#e6edf3] hover:bg-[#30363d]'
+                        }`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${isStarred ? 'fill-current' : 'text-[#8b949e]'}`} />
+                        <span>{isStarred ? 'Starred' : 'Star'}</span>
+                        <span className="ml-1 text-[11px] text-[#8b949e] font-mono">
+                          {repo.stars_cum + (isStarred ? 1 : 0)}
+                        </span>
+                      </button>
+                    </div>
 
-                      {/* GitHub Topic tags */}
-                      {repo.topics && (
-                        <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                          {repo.topics.map(t => (
-                            <span
-                              key={t}
-                              className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#1f293d] text-[#58a6ff] hover:bg-[#26354f] font-medium cursor-pointer"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                    {/* Middle: Description */}
+                    <p className="text-xs text-[#8b949e] mt-2 leading-relaxed max-w-4xl">
+                      {repo.description}
+                    </p>
 
-                      {/* Bottom metadata row */}
-                      <div className="flex items-center gap-4 text-xs text-[#8b949e] pt-1 flex-wrap">
-                        {/* Language */}
+                    {/* Topic Tags (GitHub Pill Style) */}
+                    {repo.topics && (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+                        {repo.topics.map(t => (
+                          <span
+                            key={t}
+                            className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#1f293d] text-[#58a6ff] hover:bg-[#26354f] font-medium cursor-pointer"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bottom Metadata & Engineering Predictions Strip */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3.5 pt-3 border-t border-[#21262d] text-xs text-[#8b949e]">
+                      {/* GitHub-style details */}
+                      <div className="flex items-center gap-4 flex-wrap">
                         {repo.language && (
                           <span className="flex items-center gap-1.5">
                             <span
@@ -733,101 +670,70 @@ export default function App() {
                           </span>
                         )}
 
-                        {/* Stars */}
-                        <span className="flex items-center gap-1 font-mono tabular-nums text-[#e6edf3]">
+                        <span className="flex items-center gap-1 font-mono text-[#e6edf3]">
                           <Star className="w-3.5 h-3.5 text-[#8b949e]" />
-                          <strong>{repo.stars_cum.toLocaleString()}</strong>
+                          <span>{repo.stars_cum.toLocaleString()}</span>
                           <span className="text-[#3fb950] text-[11px]">
                             (+{repo.stars_w0}/wk)
                           </span>
                         </span>
 
-                        {/* Forks */}
-                        <span className="flex items-center gap-1 font-mono tabular-nums">
+                        <span className="flex items-center gap-1 font-mono">
                           <GitFork className="w-3.5 h-3.5 text-[#8b949e]" />
                           <span>{repo.forksCount || Math.round(repo.stars_cum * repo.fork_star_ratio)}</span>
                         </span>
 
-                        {/* Growth velocity curvature */}
                         <span className="font-mono text-[11px]">
-                          Velocity: <strong className={repo.growth_ratio >= 2.5 ? 'text-[#3fb950]' : 'text-[#e6edf3]'}>{repo.growth_ratio.toFixed(2)}x</strong>
+                          Velocity:{' '}
+                          <strong className={repo.growth_ratio >= 2.5 ? 'text-[#3fb950]' : 'text-[#e6edf3]'}>
+                            {repo.growth_ratio.toFixed(2)}x
+                          </strong>
                         </span>
 
-                        {/* Fork/Star ratio */}
                         <span className="font-mono text-[11px]">
-                          Fork/Star: <strong className={repo.fork_star_ratio >= 0.18 ? 'text-[#3fb950]' : 'text-[#8b949e]'}>{(repo.fork_star_ratio * 100).toFixed(1)}%</strong>
+                          Fork/Star:{' '}
+                          <strong className={repo.fork_star_ratio >= 0.18 ? 'text-[#3fb950]' : 'text-[#8b949e]'}>
+                            {(repo.fork_star_ratio * 100).toFixed(1)}%
+                          </strong>
                         </span>
 
-                        {/* Lead time */}
                         {repo.lead_time_weeks && (
                           <span className="text-[#58a6ff] font-mono text-[11px] font-semibold bg-[#388bfd]/10 px-2 py-0.5 rounded border border-[#388bfd]/30">
-                            +{repo.lead_time_weeks} wks lead time
+                            +{repo.lead_time_weeks} wks early
                           </span>
                         )}
-
-                        {/* License */}
-                        {repo.license && (
-                          <span className="text-[#8b949e] text-[11px]">{repo.license}</span>
-                        )}
                       </div>
-                    </div>
 
-                    {/* Right: Breakout Score & Actions */}
-                    <div className="flex md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
-                      {/* GitHub Star toggle button */}
-                      <button
-                        onClick={e => toggleStar(repo.repo_id, e)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-[#30363d] transition-colors cursor-pointer ${
-                          isStarred
-                            ? 'bg-[#21262d] text-[#e3b341] border-[#e3b341]/50'
-                            : 'bg-[#21262d] text-[#e6edf3] hover:bg-[#30363d]'
-                        }`}
-                      >
-                        <Star className={`w-3.5 h-3.5 ${isStarred ? 'fill-current' : 'text-[#8b949e]'}`} />
-                        <span>{isStarred ? 'Starred' : 'Star'}</span>
-                      </button>
-
-                      {/* Breakout score badge */}
-                      <div className="text-right">
-                        <div className="text-[10px] uppercase text-[#8b949e] tracking-wider font-mono">
-                          Breakout Probability
-                        </div>
-                        <div
-                          className={`text-lg font-bold font-mono tabular-nums ${
-                            isHighProb
-                              ? 'text-[#3fb950]'
-                              : isSpam
-                              ? 'text-[#f85149]'
-                              : 'text-[#e6edf3]'
-                          }`}
-                        >
-                          {(repo.score * 100).toFixed(1)}%
-                        </div>
-                        <div className="w-24 bg-[#21262d] h-1.5 rounded-full overflow-hidden mt-1">
-                          <div
-                            className={`h-full ${
+                      {/* Right: Breakout Probability & Deep Signals Link */}
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <span className="text-[11px] text-[#8b949e] font-mono uppercase mr-2">
+                            Breakout:
+                          </span>
+                          <span
+                            className={`font-mono font-bold tabular-nums text-sm ${
                               isHighProb
-                                ? 'bg-[#3fb950]'
+                                ? 'text-[#3fb950]'
                                 : isSpam
-                                ? 'bg-[#f85149]'
-                                : 'bg-[#58a6ff]'
+                                ? 'text-[#f85149]'
+                                : 'text-[#e6edf3]'
                             }`}
-                            style={{ width: `${repo.score * 100}%` }}
-                          />
+                          >
+                            {(repo.score * 100).toFixed(1)}%
+                          </span>
                         </div>
-                      </div>
 
-                      {/* Inspect details button */}
-                      <button
-                        onClick={() => {
-                          setSelectedRepo(repo);
-                          setActiveTab('intelligence');
-                        }}
-                        className="text-xs text-[#58a6ff] hover:underline flex items-center gap-1 font-medium cursor-pointer"
-                      >
-                        <span>Deep Signals</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
+                        <button
+                          onClick={() => {
+                            setSelectedRepo(repo);
+                            setActiveTab('signals');
+                          }}
+                          className="px-2.5 py-1 text-xs text-[#58a6ff] hover:text-white bg-[#21262d] hover:bg-[#30363d] rounded border border-[#30363d] transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Deep Signals</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -837,80 +743,79 @@ export default function App() {
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 2: DEEP INTELLIGENCE (TRAJECTORIES & SIGNALS)             */}
+        {/* VIEW 2: DEEP SIGNALS & TRAJECTORIES                           */}
         {/* ------------------------------------------------------------- */}
-        {activeTab === 'intelligence' && (
+        {activeTab === 'signals' && (
           <div className="space-y-6">
-            {/* Repo Header Box */}
-            <div className="bg-[#161b22] border border-[#30363d] rounded-md p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Repo Summary Card */}
+            <div className="bg-[#111624] border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
               <div>
-                <div className="flex items-center gap-2 text-xs text-[#8b949e] mb-1">
+                <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
                   <span>{selectedRepo.category}</span>
                   <span>·</span>
                   <span>Created {selectedRepo.created_dt}</span>
                   <span>·</span>
-                  <span>Ecosystem Community: {selectedRepo.community_name}</span>
+                  <span>Ecosystem: {selectedRepo.community_name}</span>
                 </div>
 
-                <h1 className="text-2xl font-bold text-[#e6edf3] flex items-center gap-3">
-                  <BookMarked className="w-6 h-6 text-[#8b949e]" />
+                <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <BookMarked className="w-6 h-6 text-sky-400" />
                   <span>{selectedRepo.repo_name}</span>
                   <a
                     href={`https://github.com/${selectedRepo.repo_name}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#8b949e] hover:text-[#58a6ff]"
-                    title="View on GitHub"
+                    className="text-slate-400 hover:text-white"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </h1>
-                <p className="text-xs text-[#8b949e] mt-1 max-w-3xl leading-relaxed">
+                <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
                   {selectedRepo.description}
                 </p>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 shrink-0">
                 <button
                   onClick={() => fetchAiInsight(selectedRepo)}
                   disabled={isLoadingAi}
-                  className="px-3.5 py-1.5 text-xs font-semibold rounded-md bg-[#21262d] border border-[#30363d] text-[#58a6ff] hover:bg-[#30363d] transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-sky-950/70 border border-sky-800 text-sky-300 hover:bg-sky-900/80 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-                  {isLoadingAi ? 'Synthesizing...' : 'Synthesize AI Report'}
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                  {isLoadingAi ? 'Synthesizing Signals...' : 'Synthesize Technical Report'}
                 </button>
 
-                <div className="text-right pl-4 border-l border-[#30363d]">
-                  <div className="text-[10px] text-[#8b949e] uppercase font-mono">
+                <div className="text-right pl-4 border-l border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase font-mono">
                     Breakout Probability
                   </div>
-                  <div className="text-2xl font-bold font-mono text-[#3fb950] tabular-nums">
+                  <div className="text-2xl font-bold font-mono text-emerald-400 tabular-nums">
                     {(selectedRepo.score * 100).toFixed(1)}%
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Historical Star Curve & Lead Time SVG Chart */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-5 space-y-4">
+            {/* Trajectory Star Velocity Chart */}
+            <div className="border border-slate-800 rounded-xl bg-[#111624] p-5 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-sm font-semibold text-[#e6edf3]">
-                    Historical Star Velocity Curve & Lead-Time Milestone
+                  <h2 className="text-sm font-semibold text-slate-200">
+                    Historical Star Curve & Lead-Time Milestone
                   </h2>
-                  <p className="text-xs text-[#8b949e]">
-                    Demonstrating the exact lead-time weeks gained before the repository crossed 1,000 stars on GitHub Trending.
+                  <p className="text-xs text-slate-400">
+                    Empirical validation showing the exact lead-time weeks gained before the repo crossed 1,000 stars.
                   </p>
                 </div>
-                <div className="flex items-center gap-4 text-xs font-mono text-[#8b949e]">
+                <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#3fb950]" /> Star Trajectory
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Cumulative Stars
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#e3b341]" /> Flagged Breakout
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Flagged Breakout
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#58a6ff]" /> 1,000 Stars Crossed
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-400" /> 1,000 Stars Crossed
                   </span>
                 </div>
               </div>
@@ -945,13 +850,13 @@ export default function App() {
                               y1={y}
                               x2={width - pad}
                               y2={y}
-                              stroke="#30363d"
+                              stroke="#1e293b"
                               strokeDasharray="3 3"
                             />
                             <text
                               x={pad - 8}
                               y={y + 3}
-                              fill="#8b949e"
+                              fill="#64748b"
                               fontSize="10"
                               textAnchor="end"
                               className="font-mono"
@@ -962,8 +867,8 @@ export default function App() {
                         );
                       })}
 
-                      <path d={areaD} fill="rgba(63, 185, 80, 0.08)" />
-                      <path d={pathD} fill="none" stroke="#3fb950" strokeWidth="2.5" />
+                      <path d={areaD} fill="rgba(52, 211, 153, 0.08)" />
+                      <path d={pathD} fill="none" stroke="#34d399" strokeWidth="2.5" />
 
                       {points.map((p, i) => {
                         const isFlag = selectedRepo.flag_week !== undefined && i === selectedRepo.flag_week;
@@ -976,14 +881,14 @@ export default function App() {
                               cx={getX(i)}
                               cy={getY(p.cumulative_stars)}
                               r={isFlag ? 6 : 4}
-                              fill={isFlag ? '#e3b341' : '#3fb950'}
-                              stroke="#0d1117"
+                              fill={isFlag ? '#f59e0b' : '#34d399'}
+                              stroke="#0a0d14"
                               strokeWidth="2"
                             />
                             <text
                               x={getX(i)}
                               y={height - pad + 16}
-                              fill="#8b949e"
+                              fill="#64748b"
                               fontSize="10"
                               textAnchor="middle"
                               className="font-mono"
@@ -998,7 +903,7 @@ export default function App() {
                                   y1={getY(p.cumulative_stars) - 8}
                                   x2={getX(i)}
                                   y2={getY(p.cumulative_stars) - 32}
-                                  stroke="#e3b341"
+                                  stroke="#f59e0b"
                                   strokeWidth="1.5"
                                 />
                                 <rect
@@ -1007,13 +912,13 @@ export default function App() {
                                   width="130"
                                   height="20"
                                   rx="4"
-                                  fill="#21262d"
-                                  stroke="#e3b341"
+                                  fill="#18181b"
+                                  stroke="#f59e0b"
                                 />
                                 <text
                                   x={getX(i)}
                                   y={getY(p.cumulative_stars) - 38}
-                                  fill="#f2cc60"
+                                  fill="#fbbf24"
                                   fontSize="10"
                                   fontWeight="bold"
                                   textAnchor="middle"
@@ -1030,13 +935,13 @@ export default function App() {
                                   cx={getX(i)}
                                   cy={getY(p.cumulative_stars)}
                                   r="5"
-                                  fill="#58a6ff"
-                                  stroke="#0d1117"
+                                  fill="#38bdf8"
+                                  stroke="#0a0d14"
                                 />
                                 <text
                                   x={getX(i)}
                                   y={getY(p.cumulative_stars) - 10}
-                                  fill="#58a6ff"
+                                  fill="#38bdf8"
                                   fontSize="10"
                                   textAnchor="middle"
                                   className="font-mono font-bold"
@@ -1054,89 +959,89 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4 Core Signal Indicators */}
+            {/* 4 Feature Signals Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono">
-              <div className="border border-[#30363d] rounded-md p-4 bg-[#161b22]">
-                <div className="text-[#8b949e] font-sans">Growth Velocity Curvature</div>
-                <div className="text-xl font-bold text-[#e6edf3] tabular-nums mt-1">
+              <div className="border border-slate-800 rounded-xl p-4 bg-[#111624]">
+                <div className="text-slate-400 font-sans">Growth Velocity Curvature</div>
+                <div className="text-xl font-bold text-slate-100 tabular-nums mt-1">
                   {selectedRepo.growth_ratio.toFixed(2)}x
                 </div>
-                <div className="text-[11px] text-[#8b949e] mt-1 font-sans">
+                <div className="text-[11px] text-slate-400 mt-1 font-sans">
                   Snapshot week ({selectedRepo.stars_w0}) vs prior week ({selectedRepo.stars_w1})
                 </div>
               </div>
 
-              <div className="border border-[#30363d] rounded-md p-4 bg-[#161b22]">
-                <div className="text-[#8b949e] font-sans">Fork-to-Star Conversion</div>
-                <div className="text-xl font-bold text-[#e6edf3] tabular-nums mt-1">
+              <div className="border border-slate-800 rounded-xl p-4 bg-[#111624]">
+                <div className="text-slate-400 font-sans">Fork-to-Star Conversion</div>
+                <div className="text-xl font-bold text-slate-100 tabular-nums mt-1">
                   {(selectedRepo.fork_star_ratio * 100).toFixed(1)}%
                 </div>
-                <div className="text-[11px] text-[#8b949e] mt-1 font-sans">
-                  Healthy projects &ge; 18%; separates real forks from bookmarkers
+                <div className="text-[11px] text-slate-400 mt-1 font-sans">
+                  Healthy projects &ge; 18%; separates real clones from bookmarkers
                 </div>
               </div>
 
-              <div className="border border-[#30363d] rounded-md p-4 bg-[#161b22]">
-                <div className="text-[#8b949e] font-sans">Burstiness Guard Index</div>
-                <div className="text-xl font-bold text-[#e6edf3] tabular-nums mt-1">
+              <div className="border border-slate-800 rounded-xl p-4 bg-[#111624]">
+                <div className="text-slate-400 font-sans">Burstiness Guard Index</div>
+                <div className="text-xl font-bold text-slate-100 tabular-nums mt-1">
                   {selectedRepo.burstiness.toFixed(2)}
                 </div>
-                <div className="text-[11px] text-[#8b949e] mt-1 font-sans">
-                  Single-day peak / weekly stars; lower = organic multi-day adoption
+                <div className="text-[11px] text-slate-400 mt-1 font-sans">
+                  Peak day / weekly stars; lower = organic multi-day adoption
                 </div>
               </div>
 
-              <div className="border border-[#30363d] rounded-md p-4 bg-[#161b22]">
-                <div className="text-[#8b949e] font-sans">PR Merge Throughput</div>
-                <div className="text-xl font-bold text-[#e6edf3] tabular-nums mt-1">
+              <div className="border border-slate-800 rounded-xl p-4 bg-[#111624]">
+                <div className="text-slate-400 font-sans">PR Merge Throughput</div>
+                <div className="text-xl font-bold text-slate-100 tabular-nums mt-1">
                   {selectedRepo.prs_merged_4w} / {selectedRepo.prs_opened_4w} PRs
                 </div>
-                <div className="text-[11px] text-[#8b949e] mt-1 font-sans">
-                  Maintainer responsiveness across rolling 4-week window
+                <div className="text-[11px] text-slate-400 mt-1 font-sans">
+                  Maintainer throughput across past 4 weeks
                 </div>
               </div>
             </div>
 
-            {/* AI Intelligence Output */}
+            {/* AI Report Synthesis Output */}
             {aiReport && (
-              <div className="border border-[#388bfd]/40 bg-[#388bfd]/10 rounded-md p-5 space-y-3">
-                <div className="flex items-center gap-2 text-[#58a6ff] font-semibold text-sm">
+              <div className="border border-sky-900/60 bg-sky-950/20 rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2 text-sky-400 font-semibold text-sm">
                   <Sparkles className="w-4 h-4" />
-                  Gemini AI Repository Intelligence Synthesis
+                  Technical Intelligence Report
                 </div>
-                <div className="text-xs text-[#e6edf3] whitespace-pre-line leading-relaxed font-sans">
+                <div className="text-xs text-slate-300 whitespace-pre-line leading-relaxed font-sans">
                   {aiReport}
                 </div>
               </div>
             )}
 
-            {/* Nearest Co-Star Graph Neighbors */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-[#e6edf3]">
+            {/* Co-Star Nearest Neighbors */}
+            <div className="border border-slate-800 rounded-xl bg-[#111624] p-5 space-y-3">
+              <h3 className="text-sm font-semibold text-slate-200">
                 Nearest Co-Star Graph Neighbors (Shared Stargazers &ge; 3)
               </h3>
-              <p className="text-xs text-[#8b949e]">
-                GraphFrames co-star community reveals ecosystem spillover and shared mindshare.
+              <p className="text-xs text-slate-400">
+                GraphFrames co-star community reveals ecosystem spillover and shared developer mindshare.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                 {selectedRepo.nearest_costars.length > 0 ? (
                   selectedRepo.nearest_costars.map((c, i) => (
-                    <div key={i} className="border border-[#30363d] bg-[#0d1117] rounded-md p-3">
-                      <div className="text-xs font-semibold text-[#58a6ff] font-mono truncate">
+                    <div key={i} className="border border-slate-800 bg-[#0d101a] rounded-lg p-3">
+                      <div className="text-xs font-semibold text-sky-400 font-mono truncate">
                         {c.repo_name}
                       </div>
-                      <div className="text-[11px] text-[#8b949e] mt-1">
+                      <div className="text-[11px] text-slate-400 mt-1">
                         Shared Stargazers:{' '}
-                        <span className="text-[#e6edf3] font-mono font-bold">{c.shared_stargazers}</span>
+                        <span className="text-slate-200 font-mono font-bold">{c.shared_stargazers}</span>
                       </div>
-                      <div className="text-[11px] text-[#3fb950] mt-0.5">
+                      <div className="text-[11px] text-emerald-400 mt-0.5">
                         Breakout Score: <span className="font-mono">{(c.score * 100).toFixed(0)}%</span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-[#8b949e] py-2">
+                  <div className="text-xs text-slate-500 py-2">
                     No heavy neighbor overlap detected (isolated repo).
                   </div>
                 )}
@@ -1146,84 +1051,84 @@ export default function App() {
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 3: GRAPH ECOSYSTEM (GRAPHFRAMES)                         */}
+        {/* VIEW 3: GRAPH ECOSYSTEM                                       */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'graph' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h1 className="text-xl font-bold text-[#e6edf3]">
-                  Co-Star Graph & Community Ecosystems
+                <h1 className="text-2xl font-bold text-white tracking-tight">
+                  Co-Star Graph &amp; Community Ecosystems
                 </h1>
-                <p className="text-xs text-[#8b949e] mt-1 max-w-2xl">
+                <p className="text-xs text-slate-400 mt-1 max-w-2xl">
                   GraphFrames DataFrame-based graph analytics: vertices are candidate repositories, edges represent &ge; 3 shared stargazers within a rolling 60-day window.
                 </p>
               </div>
 
-              {/* Edge threshold filter slider */}
-              <div className="flex items-center gap-3 bg-[#161b22] border border-[#30363d] rounded-md px-4 py-2 text-xs">
-                <span className="text-[#8b949e]">Min Shared Stargazers:</span>
+              {/* Edge threshold slider */}
+              <div className="flex items-center gap-3 bg-[#111624] border border-slate-800 rounded-lg px-4 py-2 text-xs">
+                <span className="text-slate-400">Min Shared Stargazers:</span>
                 <input
                   type="range"
                   min="5"
                   max="40"
                   value={minEdgeWeight}
                   onChange={e => setMinEdgeWeight(parseInt(e.target.value, 10))}
-                  className="w-28 accent-[#58a6ff]"
+                  className="w-28 accent-sky-500"
                 />
-                <span className="font-mono font-bold text-[#58a6ff] w-8">{minEdgeWeight}</span>
+                <span className="font-mono font-bold text-sky-400 w-8">{minEdgeWeight}</span>
               </div>
             </div>
 
             {/* Graph Guards Callout Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div className="border border-[#30363d] bg-[#161b22] rounded-md p-4">
-                <div className="text-[#e6edf3] font-semibold flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-[#3fb950]" />
+              <div className="border border-slate-800 bg-[#111624] rounded-xl p-4">
+                <div className="text-slate-200 font-semibold flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-emerald-400" />
                   Heavy Stargazer Guard
                 </div>
-                <div className="text-[#8b949e] mt-1 text-[11px] leading-relaxed">
-                  Users with &gt; 200 stars dropped via <code className="text-[#e6edf3] font-mono">left_anti</code> join to prevent $O(N^2)$ quadratic edge explosion.
+                <div className="text-slate-400 mt-1 text-[11px] leading-relaxed">
+                  Users with &gt; 200 stars dropped via <code className="text-slate-300 font-mono">left_anti</code> join to prevent $O(N^2)$ quadratic edge explosion.
                 </div>
               </div>
-              <div className="border border-[#30363d] bg-[#161b22] rounded-md p-4">
-                <div className="text-[#e6edf3] font-semibold flex items-center gap-2">
-                  <Network className="w-4 h-4 text-[#58a6ff]" />
+              <div className="border border-slate-800 bg-[#111624] rounded-xl p-4">
+                <div className="text-slate-200 font-semibold flex items-center gap-2">
+                  <Network className="w-4 h-4 text-sky-400" />
                   Edge Weight Floor
                 </div>
-                <div className="text-[#8b949e] mt-1 text-[11px] leading-relaxed">
+                <div className="text-slate-400 mt-1 text-[11px] leading-relaxed">
                   Edges required to have weight &ge; 3 shared stargazers, pruning 89% of noisy transient coincidences.
                 </div>
               </div>
-              <div className="border border-[#30363d] bg-[#161b22] rounded-md p-4">
-                <div className="text-[#e6edf3] font-semibold flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-[#d29922]" />
+              <div className="border border-slate-800 bg-[#111624] rounded-xl p-4">
+                <div className="text-slate-200 font-semibold flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-amber-400" />
                   Graph Algorithms
                 </div>
-                <div className="text-[#8b949e] mt-1 text-[11px] leading-relaxed">
-                  Distributed PageRank (resetProb=0.15, maxIter=10) & Label Propagation community clustering.
+                <div className="text-slate-400 mt-1 text-[11px] leading-relaxed">
+                  Distributed PageRank (resetProb=0.15, maxIter=10) &amp; Label Propagation community clustering.
                 </div>
               </div>
             </div>
 
             {/* Interactive SVG Network Canvas */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-6 relative">
+            <div className="border border-slate-800 rounded-xl bg-[#0a0d14] p-6 relative">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-                <div className="text-xs text-[#8b949e]">
-                  Interactive Co-Star Network Diagram (Click node to inspect trajectory)
+                <div className="text-xs text-slate-400">
+                  Interactive Co-Star Network Diagram (Click node to inspect repository signals)
                 </div>
-                <div className="flex items-center gap-4 text-xs font-mono text-[#8b949e] flex-wrap">
+                <div className="flex items-center gap-4 text-xs font-mono text-slate-400 flex-wrap">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#3fb950]" /> LLM Serving
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> LLM Serving
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#58a6ff]" /> Agents & Gateways
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-400" /> Agents &amp; Gateways
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#e3b341]" /> Vector & Search
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Vector &amp; Search
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#a371f7]" /> Systems & Edge
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400" /> Systems &amp; Edge
                   </span>
                 </div>
               </div>
@@ -1248,11 +1153,11 @@ export default function App() {
                   };
 
                   const colorMap: Record<number, string> = {
-                    1: '#3fb950',
-                    2: '#58a6ff',
-                    3: '#e3b341',
-                    5: '#a371f7',
-                    0: '#f85149'
+                    1: '#34d399',
+                    2: '#38bdf8',
+                    3: '#fbbf24',
+                    5: '#c084fc',
+                    0: '#f87171'
                   };
 
                   return (
@@ -1270,9 +1175,9 @@ export default function App() {
                             y1={src[1]}
                             x2={dst[0]}
                             y2={dst[1]}
-                            stroke="#30363d"
+                            stroke="#334155"
                             strokeWidth={strokeWidth}
-                            strokeOpacity={0.7}
+                            strokeOpacity={0.6}
                           />
                         );
                       })}
@@ -1282,7 +1187,7 @@ export default function App() {
                         const pt = coords[node.id];
                         if (!pt) return null;
                         const radius = Math.max(7, Math.min(22, node.pagerank * 150));
-                        const color = colorMap[node.community_id] || '#8b949e';
+                        const color = colorMap[node.community_id] || '#64748b';
                         const isSelected = selectedRepo.repo_name === node.repo_name;
 
                         return (
@@ -1295,7 +1200,7 @@ export default function App() {
                               );
                               if (repoMatch) {
                                 setSelectedRepo(repoMatch);
-                                setActiveTab('intelligence');
+                                setActiveTab('signals');
                               }
                             }}
                           >
@@ -1304,14 +1209,14 @@ export default function App() {
                               cy={pt[1]}
                               r={radius}
                               fill={color}
-                              stroke={isSelected ? '#ffffff' : '#161b22'}
+                              stroke={isSelected ? '#ffffff' : '#0a0d14'}
                               strokeWidth={isSelected ? 3 : 2}
                               className="transition-all hover:opacity-80"
                             />
                             <text
                               x={pt[0]}
                               y={pt[1] + radius + 13}
-                              fill="#e6edf3"
+                              fill="#e2e8f0"
                               fontSize="11"
                               fontWeight="600"
                               textAnchor="middle"
@@ -1322,7 +1227,7 @@ export default function App() {
                             <text
                               x={pt[0]}
                               y={pt[1] + radius + 23}
-                              fill="#8b949e"
+                              fill="#64748b"
                               fontSize="9"
                               textAnchor="middle"
                               className="font-mono pointer-events-none"
@@ -1341,15 +1246,15 @@ export default function App() {
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 4: LAKEHOUSE FUNNEL (MEDALLION ARCHITECTURE)             */}
+        {/* VIEW 4: LAKEHOUSE FUNNEL                                      */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'funnel' && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-xl font-bold text-[#e6edf3]">
+              <h1 className="text-2xl font-bold text-white tracking-tight">
                 Medallion Data Lakehouse Processing Funnel
               </h1>
-              <p className="text-xs text-[#8b949e] mt-1 max-w-2xl">
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl">
                 Demonstrating multi-tier row and byte shrinkage from 1.48 Billion raw events down to 148,000 candidate weekly rows (99.99% overall reduction).
               </p>
             </div>
@@ -1357,33 +1262,33 @@ export default function App() {
             {/* Funnel Stage Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {FUNNEL_STAGES.map((stage, idx) => (
-                <div key={idx} className="border border-[#30363d] rounded-md p-5 bg-[#161b22] space-y-2">
+                <div key={idx} className="border border-slate-800 rounded-xl p-5 bg-[#111624] space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[#e6edf3]">{stage.stage}</span>
-                    <span className="font-mono text-[#8b949e]">{stage.grain}</span>
+                    <span className="font-semibold text-slate-200">{stage.stage}</span>
+                    <span className="font-mono text-slate-500">{stage.grain}</span>
                   </div>
-                  <div className="text-xl font-bold font-mono text-[#e6edf3] tabular-nums">
+                  <div className="text-xl font-bold font-mono text-slate-100 tabular-nums">
                     {stage.displayRows}
                   </div>
-                  <div className="flex items-center justify-between text-xs text-[#8b949e] font-mono">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
                     <span>{stage.sizeBytes}</span>
-                    <span className="text-[#3fb950] font-medium">
+                    <span className="text-emerald-400 font-medium">
                       {stage.reductionPct > 0 ? `-${stage.reductionPct}%` : 'Baseline'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#8b949e] pt-1 font-sans">{stage.note}</p>
+                  <p className="text-[11px] text-slate-400 pt-1 font-sans">{stage.note}</p>
                 </div>
               ))}
             </div>
 
-            {/* Funnel Architecture Table */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-[#e6edf3]">
+            {/* Funnel Reduction Efficiency Table */}
+            <div className="border border-slate-800 rounded-xl bg-[#111624] p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-slate-200">
                 Lakehouse Reduction Efficiency Table
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-[#0d1117] text-[#8b949e] border-b border-[#30363d] uppercase text-[10px]">
+                  <thead className="bg-[#0b0e17] text-slate-400 border-b border-slate-800 uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-4">Stage</th>
                       <th className="py-2.5 px-4">Grain</th>
@@ -1393,21 +1298,21 @@ export default function App() {
                       <th className="py-2.5 px-4 font-sans">Engineering Optimization</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#30363d]">
+                  <tbody className="divide-y divide-slate-800/60">
                     {FUNNEL_STAGES.map((stage, idx) => (
-                      <tr key={idx} className="hover:bg-[#21262d]/50">
-                        <td className="py-3 px-4 font-semibold text-[#e6edf3]">{stage.stage}</td>
-                        <td className="py-3 px-4 text-[#8b949e]">{stage.grain}</td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#e6edf3]">
+                      <tr key={idx} className="hover:bg-slate-800/30">
+                        <td className="py-3 px-4 font-semibold text-slate-200">{stage.stage}</td>
+                        <td className="py-3 px-4 text-slate-400">{stage.grain}</td>
+                        <td className="py-3 px-4 text-right tabular-nums text-slate-100">
                           {stage.rows.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#8b949e]">
+                        <td className="py-3 px-4 text-right tabular-nums text-slate-300">
                           {stage.sizeBytes}
                         </td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#3fb950] font-semibold">
+                        <td className="py-3 px-4 text-right tabular-nums text-emerald-400 font-semibold">
                           {stage.reductionPct > 0 ? `${stage.reductionPct}%` : '0%'}
                         </td>
-                        <td className="py-3 px-4 font-sans text-[#8b949e]">{stage.note}</td>
+                        <td className="py-3 px-4 font-sans text-slate-400">{stage.note}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1423,22 +1328,22 @@ export default function App() {
         {activeTab === 'benchmarks' && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-xl font-bold text-[#e6edf3]">
-                Benchmark Study (E1 - E9) & Model Ablation
+              <h1 className="text-2xl font-bold text-white tracking-tight">
+                Benchmark Study (E1 - E9) &amp; Model Ablation
               </h1>
-              <p className="text-xs text-[#8b949e] mt-1 max-w-2xl">
-                Empirical measurements recorded across Spark UI stages proving the 16.1x storage reduction and 25.6x graph speedup.
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                Empirical benchmarks recorded across Spark UI stages proving the 16.1x storage reduction, 24x aggregation acceleration, and 80% Precision@20.
               </p>
             </div>
 
             {/* Model Comparison Table */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-[#e6edf3]">
-                Spark MLlib Model Comparison & Ablation Matrix
+            <div className="border border-slate-800 rounded-xl bg-[#111624] p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-slate-200">
+                Spark MLlib Model Comparison &amp; Ablation Matrix
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-[#0d1117] text-[#8b949e] border-b border-[#30363d] uppercase text-[10px]">
+                  <thead className="bg-[#0b0e17] text-slate-400 border-b border-slate-800 uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-4">Model ID</th>
                       <th className="py-2.5 px-4 font-sans">Model Architecture</th>
@@ -1450,30 +1355,30 @@ export default function App() {
                       <th className="py-2.5 px-4 font-sans">Role / Research Question</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#30363d]">
+                  <tbody className="divide-y divide-slate-800/60">
                     {MODEL_COMPARISONS.map(m => (
                       <tr
                         key={m.id}
-                        className={m.id === 'M3' ? 'bg-[#238636]/10' : 'hover:bg-[#21262d]/50'}
+                        className={m.id === 'M3' ? 'bg-emerald-950/20' : 'hover:bg-slate-800/30'}
                       >
-                        <td className="py-3 px-4 font-bold text-[#e6edf3]">{m.id}</td>
-                        <td className="py-3 px-4 font-sans font-medium text-[#e6edf3]">{m.name}</td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#3fb950] font-bold">
+                        <td className="py-3 px-4 font-bold text-slate-200">{m.id}</td>
+                        <td className="py-3 px-4 font-sans font-medium text-slate-100">{m.name}</td>
+                        <td className="py-3 px-4 text-right tabular-nums text-emerald-400 font-bold">
                           {m.pr_auc.toFixed(3)}
                         </td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#e6edf3]">
+                        <td className="py-3 px-4 text-right tabular-nums text-slate-200">
                           {(m.precision_at_20 * 100).toFixed(1)}%
                         </td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#e6edf3]">
+                        <td className="py-3 px-4 text-right tabular-nums text-slate-200">
                           {(m.precision_at_50 * 100).toFixed(1)}%
                         </td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#8b949e]">
+                        <td className="py-3 px-4 text-right tabular-nums text-slate-400">
                           {m.roc_auc.toFixed(3)}
                         </td>
-                        <td className="py-3 px-4 text-right tabular-nums text-[#58a6ff] font-bold">
+                        <td className="py-3 px-4 text-right tabular-nums text-sky-400 font-bold">
                           +{m.avg_lead_time_weeks} wks
                         </td>
-                        <td className="py-3 px-4 font-sans text-[#8b949e] text-[11px]">{m.role}</td>
+                        <td className="py-3 px-4 font-sans text-slate-400 text-[11px]">{m.role}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1482,40 +1387,40 @@ export default function App() {
             </div>
 
             {/* E1..E9 Benchmark Cards */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-[#e6edf3]">
+            <div className="border border-slate-800 rounded-xl bg-[#111624] p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-slate-200">
                 Efficiency Playbook Experiments (E1 to E9)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {BENCHMARK_EXPERIMENTS.map(exp => (
-                  <div key={exp.id} className="border border-[#30363d] bg-[#0d1117] rounded-md p-4 space-y-3">
+                  <div key={exp.id} className="border border-slate-800 bg-[#0d101a] rounded-xl p-4 space-y-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono font-bold text-[#58a6ff]">
+                      <span className="font-mono font-bold text-sky-400">
                         [{exp.id}] {exp.experiment}
                       </span>
-                      <span className="font-mono text-xs font-semibold bg-[#238636]/20 border border-[#238636]/40 text-[#3fb950] px-2 py-0.5 rounded">
+                      <span className="font-mono text-xs font-semibold bg-emerald-950/80 border border-emerald-800 text-emerald-300 px-2 py-0.5 rounded">
                         {exp.speedup} Speedup
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-                      <div className="bg-[#161b22] p-2.5 rounded border border-[#30363d]">
-                        <div className="text-[10px] text-[#8b949e] uppercase">Baseline</div>
-                        <div className="text-[#e6edf3] font-medium mt-0.5">{exp.baseline_name}</div>
-                        <div className="text-[#8b949e] text-[11px] mt-0.5">
+                      <div className="bg-[#131824] p-2.5 rounded border border-slate-800">
+                        <div className="text-[10px] text-slate-500 uppercase">Baseline</div>
+                        <div className="text-slate-200 font-medium mt-0.5">{exp.baseline_name}</div>
+                        <div className="text-slate-400 text-[11px] mt-0.5">
                           {exp.baseline_val} {exp.unit}
                         </div>
                       </div>
-                      <div className="bg-[#161b22] p-2.5 rounded border border-[#388bfd]/30">
-                        <div className="text-[10px] text-[#58a6ff] uppercase">Optimized</div>
-                        <div className="text-[#58a6ff] font-medium mt-0.5">{exp.optimised_name}</div>
-                        <div className="text-[#e6edf3] text-[11px] mt-0.5">
+                      <div className="bg-[#131824] p-2.5 rounded border border-sky-900/40">
+                        <div className="text-[10px] text-sky-400 uppercase">Optimized</div>
+                        <div className="text-sky-300 font-medium mt-0.5">{exp.optimised_name}</div>
+                        <div className="text-slate-200 text-[11px] mt-0.5">
                           {exp.optimised_val} {exp.unit}
                         </div>
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-[#8b949e] leading-relaxed font-sans">
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
                       {exp.spark_ui_explanation}
                     </p>
                   </div>
@@ -1526,255 +1431,48 @@ export default function App() {
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 6: ACTIONS WORKFLOW (SPARK PIPELINE RUNNER)              */}
-        {/* ZERO BLACK SCREEN! Modeled after GitHub Actions Run UI        */}
-        {/* ------------------------------------------------------------- */}
-        {activeTab === 'actions' && (
-          <div className="space-y-6">
-            {/* GitHub Actions Run Header */}
-            <div className="bg-[#161b22] border border-[#30363d] rounded-md p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-xs text-[#8b949e] mb-1">
-                  <Terminal className="w-3.5 h-3.5 text-[#3fb950]" />
-                  <span>.github/workflows/pulse-pipeline.yml</span>
-                  <span>·</span>
-                  <span>Run #142 (workflow_dispatch)</span>
-                </div>
-                <h1 className="text-xl font-bold text-[#e6edf3] flex items-center gap-2.5">
-                  <span>Open-Source Pulse Pipeline Engine</span>
-                  {pipelineCompleted && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#238636]/20 text-[#3fb950] font-semibold border border-[#238636]/40 flex items-center gap-1">
-                      <Check className="w-3 h-3" />
-                      Success
-                    </span>
-                  )}
-                  {isPipelineRunning && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#388bfd]/20 text-[#58a6ff] font-semibold border border-[#388bfd]/40 flex items-center gap-1 animate-pulse">
-                      <Activity className="w-3 h-3 animate-spin" />
-                      In progress
-                    </span>
-                  )}
-                </h1>
-                <p className="text-xs text-[#8b949e] mt-1">
-                  Orchestrated PySpark Lakehouse pipeline across 7 stages with AQE, GraphFrames, and DuckDB serving.
-                </p>
-              </div>
-
-              {/* Execution Controls */}
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="flex items-center bg-[#0d1117] border border-[#30363d] rounded-md p-0.5 text-xs font-mono">
-                  {(['T0', 'T1', 'T2'] as const).map(tier => (
-                    <button
-                      key={tier}
-                      onClick={() => setPipelineTier(tier)}
-                      className={`px-2.5 py-1 rounded transition-colors ${
-                        pipelineTier === tier
-                          ? 'bg-[#30363d] text-[#e6edf3] font-bold'
-                          : 'text-[#8b949e] hover:text-[#e6edf3]'
-                      }`}
-                    >
-                      {tier}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={startPipelineExecution}
-                  disabled={isPipelineRunning}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#238636] hover:bg-[#2ea043] rounded-md transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isPipelineRunning ? (
-                    <>
-                      <Activity className="w-3.5 h-3.5 animate-spin" />
-                      <span>Executing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Re-run All Jobs ({pipelineTier})</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Split View: Left Jobs Checklist, Right Dark Console */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: 7 Workflow Jobs */}
-              <div className="lg:col-span-5 space-y-2">
-                <div className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-2 font-mono">
-                  Workflow Jobs (7 Steps)
-                </div>
-
-                <div className="border border-[#30363d] rounded-md bg-[#161b22] divide-y divide-[#30363d]">
-                  {pipelineStages.map((stage, idx) => {
-                    const isCompleted = activeStepIndex > idx || pipelineCompleted;
-                    const isRunning = activeStepIndex === idx && isPipelineRunning;
-
-                    return (
-                      <div
-                        key={stage.id}
-                        className={`p-3 flex items-start justify-between gap-3 transition-colors ${
-                          isRunning
-                            ? 'bg-[#388bfd]/10'
-                            : isCompleted
-                            ? 'bg-transparent'
-                            : 'opacity-60'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2.5">
-                          <div className="mt-0.5">
-                            {isCompleted && (
-                              <CheckCircle2 className="w-4 h-4 text-[#3fb950]" />
-                            )}
-                            {isRunning && (
-                              <Activity className="w-4 h-4 text-[#58a6ff] animate-spin" />
-                            )}
-                            {!isCompleted && !isRunning && (
-                              <span className="w-4 h-4 rounded-full border border-[#8b949e] flex items-center justify-center text-[10px] text-[#8b949e]">
-                                {stage.step}
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold text-[#e6edf3] font-mono">
-                              {stage.name}
-                            </div>
-                            <div className="text-[11px] text-[#8b949e] mt-0.5 font-sans leading-tight">
-                              {stage.desc}
-                            </div>
-                          </div>
-                        </div>
-
-                        <span className="text-[11px] font-mono text-[#8b949e] shrink-0">
-                          {stage.duration}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Right Column: GitHub Actions Console Output */}
-              <div className="lg:col-span-7 space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono text-[#8b949e] mb-2">
-                  <span className="uppercase tracking-wider">Runner Console Output</span>
-                  <span>UTC · local[8] · zstd</span>
-                </div>
-
-                <div className="border border-[#30363d] rounded-md bg-[#0d1117] overflow-hidden shadow-inner">
-                  <div className="bg-[#161b22] border-b border-[#30363d] px-3 py-2 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 text-[#8b949e] font-mono">
-                      <Terminal className="w-3.5 h-3.5 text-[#3fb950]" />
-                      <span>spark-executor.log</span>
-                    </div>
-                    <span className="text-[11px] text-[#8b949e] font-mono">
-                      {pipelineLogs.length} lines
-                    </span>
-                  </div>
-
-                  <div className="p-4 h-80 overflow-y-auto font-mono text-xs text-[#e6edf3] space-y-2.5">
-                    {pipelineLogs.map((log, i) => (
-                      <div key={i} className="flex items-start gap-2 leading-relaxed">
-                        <span className="text-[#3fb950] shrink-0">&gt;</span>
-                        <span className="text-[#8b949e]">{log}</span>
-                      </div>
-                    ))}
-                    {isPipelineRunning && (
-                      <div className="flex items-center gap-2 text-[#58a6ff] pt-1">
-                        <span className="w-2 h-2 rounded-full bg-[#58a6ff] animate-ping" />
-                        <span>Processing Spark RDD transformations and writing Parquet blocks...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Generated Artifacts Summary */}
-            <div className="border border-[#30363d] rounded-md bg-[#161b22] p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
-                <Database className="w-4 h-4 text-[#58a6ff]" />
-                Materialized Lakehouse Artifacts
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
-                <div className="bg-[#0d1117] border border-[#30363d] rounded p-3">
-                  <div className="text-[#8b949e] text-[10px]">OUTPUT FILE</div>
-                  <div className="text-[#58a6ff] font-semibold mt-1">
-                    data/bronze/events/dt=*
-                  </div>
-                  <div className="text-[#8b949e] mt-1 text-[11px]">
-                    390M filtered events · zstd dictionary compression
-                  </div>
-                </div>
-
-                <div className="bg-[#0d1117] border border-[#30363d] rounded p-3">
-                  <div className="text-[#8b949e] text-[10px]">OUTPUT FILE</div>
-                  <div className="text-[#3fb950] font-semibold mt-1">
-                    data/gold/graph_edges.parquet
-                  </div>
-                  <div className="text-[#8b949e] mt-1 text-[11px]">
-                    1.2M co-star edges · weight &ge; 3 shared stargazers
-                  </div>
-                </div>
-
-                <div className="bg-[#0d1117] border border-[#30363d] rounded p-3">
-                  <div className="text-[#8b949e] text-[10px]">OUTPUT FILE</div>
-                  <div className="text-[#e3b341] font-semibold mt-1">
-                    data/serving/scores/*.parquet
-                  </div>
-                  <div className="text-[#8b949e] mt-1 text-[11px]">
-                    148K scored candidates · &lt;15ms query response
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------- */}
-        {/* VIEW 7: LIVE SIMULATOR (NEW FEATURE!)                         */}
+        {/* VIEW 6: LIVE SIMULATOR                                        */}
         {/* Real-time custom repo breakout predictor                     */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'simulator' && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h1 className="text-xl font-bold text-[#e6edf3] flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-[#d29922]" />
+                <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-amber-400" />
                   Live Repository Breakout Simulator
                 </h1>
-                <p className="text-xs text-[#8b949e] mt-1 max-w-2xl">
-                  Test any custom repository metrics against the trained Spark MLlib GBTClassifier to observe real-time probability inference, SHAP attribution, and estimated lead time.
+                <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                  Test custom repository early interaction signals against the trained Spark MLlib GBTClassifier to observe real-time probability inference, SHAP attribution, and estimated lead time.
                 </p>
               </div>
 
               {/* Quick Presets */}
               <div className="flex items-center gap-2 flex-wrap text-xs">
-                <span className="text-[#8b949e]">Presets:</span>
+                <span className="text-slate-400">Presets:</span>
                 <button
                   onClick={() => loadPreset('viral_ai')}
-                  className="px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#3fb950] border border-[#30363d] cursor-pointer"
+                  className="px-2.5 py-1 rounded bg-[#131824] hover:bg-slate-800 text-emerald-400 border border-slate-700 cursor-pointer"
                 >
                   Viral AI Agent
                 </button>
                 <button
                   onClick={() => loadPreset('organic_tool')}
-                  className="px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] border border-[#30363d] cursor-pointer"
+                  className="px-2.5 py-1 rounded bg-[#131824] hover:bg-slate-800 text-sky-400 border border-slate-700 cursor-pointer"
                 >
                   Organic Dev Tool
                 </button>
                 <button
                   onClick={() => loadPreset('bot_spam')}
-                  className="px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#f85149] border border-[#30363d] cursor-pointer"
+                  className="px-2.5 py-1 rounded bg-[#131824] hover:bg-slate-800 text-rose-400 border border-slate-700 cursor-pointer"
                 >
                   Fake Star Bot
                 </button>
                 <button
                   onClick={() => loadPreset('stalled')}
-                  className="px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] border border-[#30363d] cursor-pointer"
+                  className="px-2.5 py-1 rounded bg-[#131824] hover:bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer"
                 >
-                  Stalled Project
+                  Stalled Side Project
                 </button>
               </div>
             </div>
@@ -1782,28 +1480,28 @@ export default function App() {
             {/* Two Column Layout: Controls Left, Prediction Card Right */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left: Interactive Input Sliders */}
-              <div className="lg:col-span-7 bg-[#161b22] border border-[#30363d] rounded-md p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-[#58a6ff]" />
+              <div className="lg:col-span-7 bg-[#111624] border border-slate-800 rounded-xl p-5 space-y-4">
+                <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-sky-400" />
                   Repository Metric Parameters
                 </h3>
 
                 {/* Repo Name */}
                 <div>
-                  <label className="text-xs text-[#8b949e] block mb-1">Repository Identifier</label>
+                  <label className="text-xs text-slate-400 block mb-1">Repository Identifier</label>
                   <input
                     type="text"
                     value={simName}
                     onChange={e => setSimName(e.target.value)}
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-[#e6edf3] font-mono focus:outline-none focus:border-[#58a6ff]"
+                    className="w-full bg-[#0a0d14] border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-500"
                   />
                 </div>
 
                 {/* Cumulative Stars */}
                 <div>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#8b949e]">Current Cumulative Stars (snapshot window: 20-300)</span>
-                    <span className="font-mono text-[#e6edf3] font-bold">{simStarsCum}</span>
+                    <span className="text-slate-400">Current Cumulative Stars (candidate window: 20-300)</span>
+                    <span className="font-mono text-slate-100 font-bold">{simStarsCum}</span>
                   </div>
                   <input
                     type="range"
@@ -1811,7 +1509,7 @@ export default function App() {
                     max="300"
                     value={simStarsCum}
                     onChange={e => setSimStarsCum(parseInt(e.target.value, 10))}
-                    className="w-full accent-[#58a6ff]"
+                    className="w-full accent-sky-500"
                   />
                 </div>
 
@@ -1819,8 +1517,8 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-[#8b949e]">Snapshot Wk Stars (w0)</span>
-                      <span className="font-mono text-[#e6edf3] font-bold">{simStarsW0}</span>
+                      <span className="text-slate-400">Snapshot Wk Stars (w0)</span>
+                      <span className="font-mono text-slate-100 font-bold">{simStarsW0}</span>
                     </div>
                     <input
                       type="range"
@@ -1828,13 +1526,13 @@ export default function App() {
                       max="150"
                       value={simStarsW0}
                       onChange={e => setSimStarsW0(parseInt(e.target.value, 10))}
-                      className="w-full accent-[#58a6ff]"
+                      className="w-full accent-sky-500"
                     />
                   </div>
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-[#8b949e]">Prior Wk Stars (w1)</span>
-                      <span className="font-mono text-[#e6edf3] font-bold">{simStarsW1}</span>
+                      <span className="text-slate-400">Prior Wk Stars (w1)</span>
+                      <span className="font-mono text-slate-100 font-bold">{simStarsW1}</span>
                     </div>
                     <input
                       type="range"
@@ -1842,7 +1540,7 @@ export default function App() {
                       max="80"
                       value={simStarsW1}
                       onChange={e => setSimStarsW1(parseInt(e.target.value, 10))}
-                      className="w-full accent-[#58a6ff]"
+                      className="w-full accent-sky-500"
                     />
                   </div>
                 </div>
@@ -1850,8 +1548,8 @@ export default function App() {
                 {/* Fork-to-star ratio */}
                 <div>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#8b949e]">Fork-to-Star Conversion Ratio</span>
-                    <span className="font-mono text-[#e6edf3] font-bold">
+                    <span className="text-slate-400">Fork-to-Star Conversion Ratio</span>
+                    <span className="font-mono text-slate-100 font-bold">
                       {(simForkRatio * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -1862,9 +1560,9 @@ export default function App() {
                     step="0.01"
                     value={simForkRatio}
                     onChange={e => setSimForkRatio(parseFloat(e.target.value))}
-                    className="w-full accent-[#58a6ff]"
+                    className="w-full accent-sky-500"
                   />
-                  <div className="text-[10px] text-[#8b949e] mt-0.5">
+                  <div className="text-[10px] text-slate-400 mt-0.5">
                     Healthy conversion &ge; 18%; low conversion signals artificial star campaigns.
                   </div>
                 </div>
@@ -1872,8 +1570,8 @@ export default function App() {
                 {/* Burstiness Index */}
                 <div>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#8b949e]">Burstiness Index (Peak Day / Weekly Stars)</span>
-                    <span className="font-mono text-[#e6edf3] font-bold">
+                    <span className="text-slate-400">Burstiness Index (Peak Day / Weekly Stars)</span>
+                    <span className="font-mono text-slate-100 font-bold">
                       {simBurstiness.toFixed(2)}
                     </span>
                   </div>
@@ -1884,9 +1582,9 @@ export default function App() {
                     step="0.02"
                     value={simBurstiness}
                     onChange={e => setSimBurstiness(parseFloat(e.target.value))}
-                    className="w-full accent-[#58a6ff]"
+                    className="w-full accent-sky-500"
                   />
-                  <div className="text-[10px] text-[#8b949e] mt-0.5">
+                  <div className="text-[10px] text-slate-400 mt-0.5">
                     Lower values indicate sustained multi-day interest; &gt;0.80 indicates star bot spikes.
                   </div>
                 </div>
@@ -1895,8 +1593,8 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-[#8b949e]">PRs Merged (4w)</span>
-                      <span className="font-mono text-[#e6edf3] font-bold">{simPrsMerged}</span>
+                      <span className="text-slate-400">PRs Merged (4w)</span>
+                      <span className="font-mono text-slate-100 font-bold">{simPrsMerged}</span>
                     </div>
                     <input
                       type="range"
@@ -1904,13 +1602,13 @@ export default function App() {
                       max="50"
                       value={simPrsMerged}
                       onChange={e => setSimPrsMerged(parseInt(e.target.value, 10))}
-                      className="w-full accent-[#58a6ff]"
+                      className="w-full accent-sky-500"
                     />
                   </div>
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-[#8b949e]">Co-star PageRank</span>
-                      <span className="font-mono text-[#e6edf3] font-bold">
+                      <span className="text-slate-400">Co-star PageRank</span>
+                      <span className="font-mono text-slate-100 font-bold">
                         {simPagerank.toFixed(3)}
                       </span>
                     </div>
@@ -1921,7 +1619,7 @@ export default function App() {
                       step="0.005"
                       value={simPagerank}
                       onChange={e => setSimPagerank(parseFloat(e.target.value))}
-                      className="w-full accent-[#58a6ff]"
+                      className="w-full accent-sky-500"
                     />
                   </div>
                 </div>
@@ -1929,33 +1627,33 @@ export default function App() {
 
               {/* Right: Real-time Inferred Output */}
               <div className="lg:col-span-5 space-y-4">
-                <div className="bg-[#161b22] border border-[#30363d] rounded-md p-5 space-y-4">
-                  <div className="text-xs font-mono text-[#8b949e] uppercase tracking-wider">
+                <div className="bg-[#111624] border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
+                  <div className="text-xs font-mono text-slate-400 uppercase tracking-wider">
                     MLlib GBT Inference Verdict
                   </div>
 
-                  <div className="flex items-baseline justify-between border-b border-[#30363d] pb-4">
+                  <div className="flex items-baseline justify-between border-b border-slate-800 pb-4">
                     <div>
-                      <div className="text-3xl font-extrabold font-mono tabular-nums text-[#e6edf3]">
+                      <div className="text-3xl font-extrabold font-mono tabular-nums text-white">
                         {(simResult.probability * 100).toFixed(1)}%
                       </div>
-                      <div className="text-xs text-[#8b949e] mt-0.5 font-mono">
+                      <div className="text-xs text-slate-400 mt-0.5 font-mono">
                         Calibrated Probability Score
                       </div>
                     </div>
 
                     {simResult.isBreakout ? (
-                      <span className="px-3 py-1 rounded bg-[#238636]/20 border border-[#238636]/40 text-[#3fb950] font-semibold text-xs flex items-center gap-1.5 font-mono">
+                      <span className="px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800 text-emerald-300 font-semibold text-xs flex items-center gap-1.5 font-mono">
                         <Flame className="w-3.5 h-3.5" />
                         Breakout Imminent
                       </span>
                     ) : simResult.isSpam ? (
-                      <span className="px-3 py-1 rounded bg-[#da3633]/20 border border-[#da3633]/40 text-[#f85149] font-semibold text-xs flex items-center gap-1.5 font-mono">
+                      <span className="px-3 py-1 rounded-full bg-rose-950/80 border border-rose-800 text-rose-300 font-semibold text-xs flex items-center gap-1.5 font-mono">
                         <AlertTriangle className="w-3.5 h-3.5" />
                         Flagged Bot Farm
                       </span>
                     ) : (
-                      <span className="px-3 py-1 rounded bg-[#30363d] text-[#8b949e] font-semibold text-xs font-mono">
+                      <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-400 font-semibold text-xs font-mono">
                         Sub-Threshold
                       </span>
                     )}
@@ -1963,9 +1661,9 @@ export default function App() {
 
                   {/* Lead Time Estimate */}
                   {simResult.isBreakout && (
-                    <div className="bg-[#388bfd]/10 border border-[#388bfd]/30 rounded p-3 text-xs flex items-center justify-between">
-                      <span className="text-[#e6edf3]">Estimated Early Lead Time:</span>
-                      <span className="font-mono font-bold text-[#58a6ff]">
+                    <div className="bg-sky-950/30 border border-sky-800/40 rounded-lg p-3 text-xs flex items-center justify-between">
+                      <span className="text-slate-200">Estimated Early Lead Time:</span>
+                      <span className="font-mono font-bold text-sky-400">
                         +{simResult.leadTime} weeks before trending
                       </span>
                     </div>
@@ -1973,18 +1671,18 @@ export default function App() {
 
                   {/* Feature Attribution Waterfall */}
                   <div className="space-y-2 pt-2">
-                    <div className="text-xs font-semibold text-[#e6edf3]">
+                    <div className="text-xs font-semibold text-slate-200">
                       Feature Attributions (SHAP Contribution)
                     </div>
                     <div className="space-y-1.5 font-mono text-xs">
                       {simResult.attributions.map((attr, i) => (
-                        <div key={i} className="flex items-center justify-between text-[11px] py-1 border-b border-[#30363d]/50">
-                          <span className="text-[#8b949e] font-sans">{attr.feature}</span>
+                        <div key={i} className="flex items-center justify-between text-[11px] py-1 border-b border-slate-800/50">
+                          <span className="text-slate-400 font-sans">{attr.feature}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-[#e6edf3]">{attr.val}</span>
+                            <span className="text-slate-200">{attr.val}</span>
                             <span
                               className={`w-14 text-right font-semibold ${
-                                attr.isPositive ? 'text-[#3fb950]' : 'text-[#f85149]'
+                                attr.isPositive ? 'text-emerald-400' : 'text-rose-400'
                               }`}
                             >
                               {attr.isPositive ? '+' : ''}
@@ -2002,147 +1700,287 @@ export default function App() {
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 8: README.MD (PROJECT BLUEPRINT & NARRATIVE)             */}
-        {/* Formatted in authentic GitHub Markdown view                  */}
+        {/* VIEW 7: PIPELINE ENGINE RUNNER (NO BLACK SCREEN!)             */}
         {/* ------------------------------------------------------------- */}
-        {activeTab === 'readme' && (
-          <div className="border border-[#30363d] rounded-md bg-[#0d1117] overflow-hidden">
-            {/* GitHub File Header */}
-            <div className="bg-[#161b22] border-b border-[#30363d] px-4 py-2.5 flex items-center justify-between text-xs text-[#8b949e]">
-              <div className="flex items-center gap-2 text-[#e6edf3] font-mono">
-                <FileText className="w-4 h-4 text-[#8b949e]" />
-                <span>README.md</span>
+        {activeTab === 'pipeline' && (
+          <div className="space-y-6">
+            <div className="bg-[#111624] border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+                  <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>PySpark Execution Workflow · local[8]</span>
+                </div>
+                <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
+                  <span>Spark Pipeline Engine</span>
+                  {pipelineCompleted && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 font-semibold border border-emerald-800 flex items-center gap-1 font-mono">
+                      <Check className="w-3 h-3" />
+                      Success (2.16s)
+                    </span>
+                  )}
+                  {isPipelineRunning && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-950/80 text-sky-400 font-semibold border border-sky-800 flex items-center gap-1 animate-pulse font-mono">
+                      <Activity className="w-3 h-3 animate-spin" />
+                      Processing Stages
+                    </span>
+                  )}
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Orchestrated PySpark Lakehouse pipeline across 7 stages with AQE, GraphFrames, and DuckDB serving.
+                </p>
               </div>
-              <div className="flex items-center gap-4 text-xs font-mono">
-                <span>154 lines (118 sloc)</span>
-                <span>·</span>
-                <span>4.82 KB</span>
+
+              {/* Execution Controls */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center bg-[#0a0d14] border border-slate-800 rounded-lg p-1 text-xs font-mono">
+                  {(['T0', 'T1', 'T2'] as const).map(tier => (
+                    <button
+                      key={tier}
+                      onClick={() => setPipelineTier(tier)}
+                      className={`px-3 py-1 rounded transition-colors ${
+                        pipelineTier === tier
+                          ? 'bg-sky-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {tier}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={startPipelineExecution}
+                  disabled={isPipelineRunning}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isPipelineRunning ? (
+                    <>
+                      <Activity className="w-3.5 h-3.5 animate-spin" />
+                      <span>Executing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Re-run Workflow ({pipelineTier})</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Markdown Body */}
-            <article className="p-8 max-w-4xl mx-auto space-y-6 text-sm text-[#e6edf3] leading-relaxed">
-              <div className="border-b border-[#30363d] pb-4">
-                <h1 className="text-3xl font-extrabold text-[#e6edf3] tracking-tight">
-                  Open-Source Pulse
-                </h1>
-                <p className="text-base text-[#8b949e] mt-2">
-                  Predicting Trending GitHub Repositories Early with Apache Spark 3.5, Parquet, GraphFrames & MLlib
-                </p>
-              </div>
+            {/* Split View: Left Jobs Checklist, Right Dark Console */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: 7 Workflow Jobs */}
+              <div className="lg:col-span-5 space-y-2">
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 font-mono">
+                  Pipeline Stages (7 Steps)
+                </div>
 
-              <div className="space-y-3">
-                <h2 className="text-xl font-bold text-[#e6edf3] border-b border-[#30363d] pb-1">
-                  The Core Idea
-                </h2>
-                <p className="text-[#8b949e] leading-relaxed">
-                  By the time a software project shows up on GitHub&apos;s &ldquo;trending&rdquo; page, it is already popular.
-                  This project aims to predict which brand-new open-source projects will explode in popularity
-                  (gain at least <strong>500 stars</strong>) up to a <strong>month before they actually trend</strong>.
-                </p>
-              </div>
+                <div className="border border-slate-800 rounded-xl bg-[#111624] divide-y divide-slate-800/60">
+                  {pipelineStages.map((stage, idx) => {
+                    const isCompleted = activeStepIndex > idx || pipelineCompleted;
+                    const isRunning = activeStepIndex === idx && isPipelineRunning;
 
-              <div className="space-y-3">
-                <h2 className="text-xl font-bold text-[#e6edf3] border-b border-[#30363d] pb-1">
-                  How It Works (Step-by-Step Breakdown)
-                </h2>
-                <div className="space-y-3">
-                  <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-md">
-                    <h3 className="font-semibold text-[#58a6ff]">1. Collecting the Data</h3>
-                    <p className="text-xs text-[#8b949e] mt-1">
-                      The project downloads public GitHub activity (people starring, forking, opening issues, and merging PRs) from the GH Archive database across an 18-month timeline.
-                    </p>
-                  </div>
+                    return (
+                      <div
+                        key={stage.id}
+                        className={`p-3.5 flex items-start justify-between gap-3 transition-colors ${
+                          isRunning
+                            ? 'bg-sky-950/30'
+                            : isCompleted
+                            ? 'bg-transparent'
+                            : 'opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className="mt-0.5">
+                            {isCompleted && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            )}
+                            {isRunning && (
+                              <Activity className="w-4 h-4 text-sky-400 animate-spin" />
+                            )}
+                            {!isCompleted && !isRunning && (
+                              <span className="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center text-[10px] text-slate-400">
+                                {stage.step}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-slate-100 font-mono">
+                              {stage.name}
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-0.5 font-sans leading-tight">
+                              {stage.desc}
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-md">
-                    <h3 className="font-semibold text-[#3fb950]">2. Cleaning the Noise</h3>
-                    <p className="text-xs text-[#8b949e] mt-1">
-                      Because the data is massive (1.48B raw events), the system strips out automated CI/CD bot accounts (Renovate, Dependabot) and deduplicates first-stars to measure genuine human interest.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-md">
-                    <h3 className="font-semibold text-[#e3b341]">3. Shrinking & Summarizing (Medallion Lakehouse)</h3>
-                    <p className="text-xs text-[#8b949e] mt-1">
-                      Instead of analyzing every single click, the pipeline summarizes the events into compact weekly snapshots for each candidate repository (reducing 1.48B rows down to 148k rows: a 99.99% shrinkage).
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-md">
-                    <h3 className="font-semibold text-[#a371f7]">4. Looking for Clues (Feature Engineering & Graph Analytics)</h3>
-                    <p className="text-xs text-[#8b949e] mt-1">
-                      The system calculates early warning signs: velocity curvature, fork conversion ratios, burstiness anti-spam guards, maintainer PR throughput, and analyzes the co-star network with GraphFrames PageRank to see if related communities are paying attention.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-md">
-                    <h3 className="font-semibold text-[#58a6ff]">5. Machine Learning with Zero-Data-Leakage</h3>
-                    <p className="text-xs text-[#8b949e] mt-1">
-                      A Spark MLlib Gradient-Boosted Trees classifier (depth=6, maxIter=120) scores new projects based on their likelihood of having a breakout in the next 30 days, using a strict 4-week embargo gap to prevent temporal leakage.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-md">
-                    <h3 className="font-semibold text-[#3fb950]">6. Sharing the Results</h3>
-                    <p className="text-xs text-[#8b949e] mt-1">
-                      The final scores are exported to a serving layer queried with sub-15ms latency by DuckDB and displayed in this GitHub-styled intelligence dashboard.
-                    </p>
-                  </div>
+                        <span className="text-[11px] font-mono text-slate-500 shrink-0">
+                          {stage.duration}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h2 className="text-xl font-bold text-[#e6edf3] border-b border-[#30363d] pb-1">
-                  Why This Project Matters
-                </h2>
-                <p className="text-[#8b949e] leading-relaxed">
-                  This is a classic <strong>Big Data challenge</strong>. Raw GitHub event logs exceed 1.84 Terabytes and cannot fit on a single developer machine.
-                  This project demonstrates how to cleverly compress, filter, partition, and organize massive information efficiently using Apache Spark, zstd Parquet, and GraphFrames.
-                  Ultimately, it proves that early developer interaction signals allow us to spot the next big open-source foundation <strong>an average of 3.4 weeks before the rest of the world catches on</strong>.
-                </p>
-              </div>
+              {/* Right Column: Console Output */}
+              <div className="lg:col-span-7 space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                  <span className="uppercase tracking-wider">Spark Executor Logs</span>
+                  <span>UTC · local[8] · zstd</span>
+                </div>
 
-              <div className="space-y-2 pt-2 border-t border-[#30363d] text-xs font-mono text-[#8b949e]">
-                <div>Architecture: Apache Spark 3.5.1 · PyArrow · DuckDB · GraphFrames · MLlib GBT</div>
-                <div>Evaluation: PR-AUC 0.614 · Precision@20 80.0% · Lead Time +3.4 weeks · License: MIT</div>
+                <div className="border border-slate-800 rounded-xl bg-[#0a0d14] overflow-hidden shadow-inner">
+                  <div className="bg-[#111624] border-b border-slate-800 px-3.5 py-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-slate-400 font-mono">
+                      <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>spark-executor.log</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      {pipelineLogs.length} events
+                    </span>
+                  </div>
+
+                  <div className="p-4 h-80 overflow-y-auto font-mono text-xs text-slate-300 space-y-2.5">
+                    {pipelineLogs.map((log, i) => (
+                      <div key={i} className="flex items-start gap-2 leading-relaxed">
+                        <span className="text-emerald-400 shrink-0">&gt;</span>
+                        <span className="text-slate-300">{log}</span>
+                      </div>
+                    ))}
+                    {isPipelineRunning && (
+                      <div className="flex items-center gap-2 text-sky-400 pt-1">
+                        <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+                        <span>Processing Spark transformations and writing Parquet splits...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </article>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 8: ARCHITECTURE & DOCS                                   */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'architecture' && (
+          <div className="border border-slate-800 rounded-xl bg-[#111624] p-8 max-w-4xl mx-auto space-y-6 text-sm text-slate-200 leading-relaxed shadow-sm">
+            <div className="border-b border-slate-800 pb-4">
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">
+                Open-Source Pulse
+              </h1>
+              <p className="text-base text-slate-400 mt-2">
+                Predicting Trending GitHub Repositories Early with Apache Spark 3.5, Parquet, GraphFrames &amp; MLlib
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-1">
+                The Core Idea
+              </h2>
+              <p className="text-slate-300 leading-relaxed">
+                By the time a software project shows up on GitHub&apos;s &ldquo;trending&rdquo; page, it is already popular.
+                This project aims to predict which brand-new open-source projects will explode in popularity
+                (gain at least <strong>500 stars</strong>) up to a <strong>month before they actually trend</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-1">
+                How It Works (Step-by-Step Breakdown)
+              </h2>
+              <div className="space-y-3">
+                <div className="p-4 bg-[#0d101a] border border-slate-800 rounded-lg">
+                  <h3 className="font-semibold text-sky-400">1. Collecting the Data</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    The project ingests public GitHub activity (people starring, forking, opening issues, and merging PRs) from the GH Archive database across an 18-month timeline.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#0d101a] border border-slate-800 rounded-lg">
+                  <h3 className="font-semibold text-emerald-400">2. Cleaning the Noise</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Because the raw data is massive (1.48B raw events), the pipeline strips out automated CI/CD bot accounts (Renovate, Dependabot) and deduplicates first-stars to measure genuine human interest.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#0d101a] border border-slate-800 rounded-lg">
+                  <h3 className="font-semibold text-amber-400">3. Shrinking &amp; Summarizing (Medallion Lakehouse)</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Instead of analyzing every single raw click, the pipeline summarizes events into compact weekly snapshots for each candidate repository (reducing 1.48B rows down to 148k rows: a 99.99% shrinkage).
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#0d101a] border border-slate-800 rounded-lg">
+                  <h3 className="font-semibold text-purple-400">4. Looking for Clues (Feature Engineering &amp; Graph Analytics)</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    The system calculates early warning signs: velocity curvature, fork conversion ratios, burstiness anti-spam guards, maintainer PR throughput, and analyzes the co-star network with GraphFrames PageRank to see if related communities are paying attention.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#0d101a] border border-slate-800 rounded-lg">
+                  <h3 className="font-semibold text-sky-400">5. Machine Learning with Zero-Data-Leakage</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    A Spark MLlib Gradient-Boosted Trees classifier (depth=6, maxIter=120) scores new projects based on their likelihood of having a breakout in the next 30 days, using a strict 4-week embargo gap to prevent temporal leakage.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#0d101a] border border-slate-800 rounded-lg">
+                  <h3 className="font-semibold text-emerald-400">6. Sharing the Results</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    The final scores are exported to a serving layer queried with sub-15ms latency by DuckDB and displayed in this dashboard.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-1">
+                Why This Project Matters
+              </h2>
+              <p className="text-slate-300 leading-relaxed">
+                This is a classic <strong>Big Data challenge</strong>. Raw GitHub event logs exceed 1.84 Terabytes and cannot fit on a single developer machine.
+                This project demonstrates how to cleverly compress, filter, partition, and organize massive information efficiently using Apache Spark, zstd Parquet, and GraphFrames.
+                Ultimately, it proves that early developer interaction signals allow us to spot the next big open-source foundation <strong>an average of 3.4 weeks before the rest of the world catches on</strong>.
+              </p>
+            </div>
           </div>
         )}
       </main>
 
       {/* ------------------------------------------------------------- */}
-      {/* 5. GITHUB COMPATIBLE FOOTER                                   */}
+      {/* 4. CLEAN FOOTER                                               */}
       {/* ------------------------------------------------------------- */}
-      <footer className="border-t border-[#30363d] bg-[#161b22] py-6 mt-auto text-xs text-[#8b949e]">
-        <div className="max-w-[1440px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="border-t border-slate-800/80 bg-[#0b0e17] py-5 mt-auto text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <svg height="20" viewBox="0 0 16 16" width="20" fill="#8b949e">
-              <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z" />
-            </svg>
-            <span>&copy; 2024 Open-Source Pulse Engine</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>Open-Source Pulse · Apache Spark 3.5.1 · GraphFrames · DuckDB · MLlib</span>
           </div>
 
-          <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-5">
             <button
-              onClick={() => setActiveTab('readme')}
-              className="hover:text-[#58a6ff] transition-colors cursor-pointer"
+              onClick={() => setActiveTab('architecture')}
+              className="hover:text-slate-300 transition-colors cursor-pointer"
             >
-              Docs &amp; Architecture
+              Architecture &amp; Docs
             </button>
             <button
-              onClick={() => setActiveTab('actions')}
-              className="hover:text-[#58a6ff] transition-colors cursor-pointer"
+              onClick={() => setActiveTab('pipeline')}
+              className="hover:text-slate-300 transition-colors cursor-pointer"
             >
               Pipeline Status
             </button>
             <button
               onClick={() => setActiveTab('simulator')}
-              className="hover:text-[#58a6ff] transition-colors cursor-pointer"
+              className="hover:text-slate-300 transition-colors cursor-pointer"
             >
-              Live Simulator
+              Simulator
             </button>
-            <span className="font-mono text-[#8b949e]">PySpark 3.5 · DuckDB · MIT</span>
+            <span className="font-mono text-slate-400">MIT License</span>
           </div>
         </div>
       </footer>
