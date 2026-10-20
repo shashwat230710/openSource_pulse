@@ -126,18 +126,41 @@ npm run dev
 │   ├── run_experiments.py     # E1..E9 benchmark test harness
 │   └── results.csv            # Empirical benchmark findings
 ├── api/
-│   ├── main.py                # FastAPI + DuckDB serving layer
-│   └── requirements.txt
-├── tests/
-│   ├── test_leakage.py        # Automated future label leakage tests
-│   └── test_schema.py         # Schema drift and bot pattern tests
-├── docs/
-│   ├── REPORT.md              # 15-page comprehensive technical report
-│   └── SLIDES.md              # 12-slide executive presentation
-├── docker/
-│   ├── Dockerfile.api
-│   ├── Dockerfile.dashboard
-│   └── docker-compose.yaml
-├── Makefile                   # One-command pipeline orchestration
-└── server.ts                  # Full-stack serving backend
+│   └── index.ts               # Vercel serverless function entrypoint
+├── jobs/
+│   ├── 01_ingest.py           # Phase 2: JSON.gz -> Bronze Parquet
+│   ├── 02_silver.py           # Phase 3: Bot-filtering & star deduplication
+│   ├── 03_gold.py             # Phase 4: Repo-day & repo-week aggregation
+│   ├── 04_graph.py            # Phase 7: Co-star GraphFrames analytics
+│   ├── 05_features_labels.py  # Phase 5 & 6: Features & embargo time splits
+│   ├── 06_train_eval.py       # Phase 8 & 9: MLlib training & evaluation
+│   ├── 07_score.py            # Phase 10: Weekly scoring for serving
+│   └── serving_api/           # Phase 10: Standalone FastAPI + DuckDB serving
+├── vercel.json                # Vercel deployment & routing configuration
+├── server.ts                  # Express full-stack serving backend
+└── src/                       # React 19 + Tailwind CSS dashboard
+
+---
+
+## 🌐 Deploying to Vercel
+
+The project is fully pre-configured for **turnkey deployment on Vercel**:
+
+### Option 1: 1-Click via Git Import
+1. Push this repository to GitHub or GitLab.
+2. In the [Vercel Dashboard](https://vercel.com/new), click **"Add New Project"** and select the repository.
+3. Vercel automatically detects the Vite framework and uses `vercel.json`:
+   - **Framework Preset**: Vite
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. *(Optional)* Add environment variable `GEMINI_API_KEY` in Project Settings for live AI repo intelligence briefs.
+5. Click **Deploy**. Both the Vite frontend and the `/api/*` serverless backend will be live within seconds.
+
+### Option 2: Deploy via Vercel CLI
+```bash
+# Install Vercel CLI if needed
+npm i -g vercel
+
+# Deploy directly from repository root
+vercel
 ```

@@ -1,0 +1,9 @@
+.git
+.cache
+data/bronze
+data/silver
+data/gold
+data/serving
+tests
+jobs/__pycache__
+*.pyc

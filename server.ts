@@ -17,11 +17,19 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+export const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(express.json());
+
+// Normalize URLs if routed through Vercel serverless functions
+app.use((req, _res, next) => {
+  if (req.url.startsWith('/pulse')) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
 
 // Initialize Google Gemini AI SDK if key exists
 const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -300,4 +308,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only listen on local/container port when not running inside Vercel serverless environment
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
