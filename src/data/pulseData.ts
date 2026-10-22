@@ -344,6 +344,58 @@ export const MODEL_COMPARISONS: ModelComparison[] = [
 // Rich Repository Candidates across Weeks
 export const REPOSITORY_CANDIDATES: RepoSnapshot[] = [
   {
+    repo_id: 612458902,
+    repo_name: "ggerganov/llama.cpp",
+    owner: "ggerganov",
+    name: "llama.cpp",
+    description: "LLM inference in C/C++ with minimal memory footprint and zero external dependencies",
+    category: "LLM Infrastructure",
+    created_dt: "2023-03-10",
+    week_start: "2023-03-27",
+    week_num: 1212,
+    score: 0.978,
+    stars_cum: 240,
+    stars_w0: 180,
+    stars_w1: 45,
+    growth_ratio: 3.91,
+    fork_star_ratio: 0.22,
+    burstiness: 0.28,
+    prs_opened_4w: 52,
+    prs_merged_4w: 48,
+    pushes_4w: 194,
+    active_days_4w: 28,
+    pagerank: 0.125,
+    community_id: 1,
+    community_name: "High-Performance LLM Serving",
+    community_momentum: 580,
+    is_breakout: true,
+    actual_stars_next_4w: 12400,
+    lead_time_weeks: 4,
+    flag_week: 2,
+    crossed_1k_week: 5,
+    language: "C++",
+    languageColor: "#f34b7d",
+    topics: ["llama", "llm", "c-plus-plus", "ggml", "gguf", "inference"],
+    license: "MIT",
+    openIssues: 160,
+    forksCount: 9200,
+    defaultBranch: "master",
+    officialTrendingDate: "2023-04-17",
+    trajectory: [
+      { week_start: "2023-03-10", week_offset: 0, weekly_stars: 15, cumulative_stars: 15, score: 0.45 },
+      { week_start: "2023-03-20", week_offset: 1, weekly_stars: 45, cumulative_stars: 60, score: 0.72 },
+      { week_start: "2023-03-27", week_offset: 2, weekly_stars: 180, cumulative_stars: 240, score: 0.978 },
+      { week_start: "2023-04-03", week_offset: 3, weekly_stars: 1950, cumulative_stars: 2190, score: 0.999 },
+      { week_start: "2023-04-10", week_offset: 4, weekly_stars: 3400, cumulative_stars: 5590, score: 0.999 },
+      { week_start: "2023-04-17", week_offset: 5, weekly_stars: 4800, cumulative_stars: 10390, score: 0.999 }
+    ],
+    nearest_costars: [
+      { repo_name: "ggerganov/whisper.cpp", shared_stargazers: 68, score: 0.95 },
+      { repo_name: "ollama/ollama", shared_stargazers: 54, score: 0.96 },
+      { repo_name: "vllm-project/vllm", shared_stargazers: 42, score: 0.94 }
+    ]
+  },
+  {
     repo_id: 658921001,
     repo_name: "vllm-project/vllm",
     owner: "vllm-project",
@@ -881,3 +933,238 @@ export const GRAPH_EDGES: GraphEdge[] = [
   { source: "whisper", target: "uv", weight: 12 },
   { source: "customdb", target: "llamacpp", weight: 4 }
 ];
+
+export interface EngineeredFeature {
+  id: string;
+  name: string;
+  category: 'Velocity & Acceleration' | 'Developer Utility' | 'Activity & Maintenance' | 'GraphFrames Ecosystem';
+  formula: string;
+  sparkImplementation: string;
+  description: string;
+  importanceWeight: number;
+  signalType: 'Positive Driver' | 'Organic Quality Filter' | 'Bot/Hype Penalizer' | 'Structural Multiplier';
+}
+
+export interface DatasetLedgerRow {
+  stage: string;
+  per1000Raw: number;
+  ofPreviousPct: number;
+  sharePct: number;
+  description: string;
+}
+
+export const DATASET_LEDGER: DatasetLedgerRow[] = [
+  {
+    stage: "Raw Ingest Stream (2,184 hourly files)",
+    per1000Raw: 1000.0,
+    ofPreviousPct: 100.0,
+    sharePct: 100.0,
+    description: "1.48B raw JSON events from GitHub Archive Q1 timeline (1.84 TB uncompressed)"
+  },
+  {
+    stage: "Bronze Events (Parquet Schema Enforced)",
+    per1000Raw: 263.51,
+    ofPreviousPct: 26.35,
+    sharePct: 26.35,
+    description: "390.0M events filtered to 6 core developer action types (Watch, Fork, Create, PR, Issue, Push)"
+  },
+  {
+    stage: "Silver Events (Bot Pruned & Stargazer Deduplicated)",
+    per1000Raw: 231.08,
+    ofPreviousPct: 87.69,
+    sharePct: 23.11,
+    description: "342.0M validated human events; bot automation removed, initial star per user/repo enforced"
+  },
+  {
+    stage: "Gold Layer: Repo-Day Aggregates",
+    per1000Raw: 5.69,
+    ofPreviousPct: 2.46,
+    sharePct: 0.57,
+    description: "8.42M daily aggregate rows; pruned one-off abandoned repos (<20 lifetime stars)"
+  },
+  {
+    stage: "Gold Layer: Repo-Week Sparse Windows",
+    per1000Raw: 0.865,
+    ofPreviousPct: 15.20,
+    sharePct: 0.0865,
+    description: "1.28M sparse weekly windows; computed 4-week lookbacks without Cartesian zero-filling"
+  },
+  {
+    stage: "Candidate Window Screening (20–300 stars, age <= 26w)",
+    per1000Raw: 0.100,
+    ofPreviousPct: 11.56,
+    sharePct: 0.0100,
+    description: "148,000 early-stage candidate snapshots eligible for breakout scoring"
+  },
+  {
+    stage: "Ground Truth Verified Breakouts (gained >= 500 stars in 4w)",
+    per1000Raw: 0.00086,
+    ofPreviousPct: 0.86,
+    sharePct: 0.000086,
+    description: "1,280 true breakout repositories (0.86% natural base rate across the GitHub ecosystem)"
+  }
+];
+
+export const ENGINEERED_FEATURES: EngineeredFeature[] = [
+  {
+    id: "F01",
+    name: "Snapshot Star Velocity (w0)",
+    category: "Velocity & Acceleration",
+    formula: "stars_w0 = count(WatchEvent) in snapshot week",
+    sparkImplementation: "sum('daily_stars').over(Window.partitionBy('repo_id').rangeBetween(-6, 0))",
+    description: "Number of unique developer stars acquired in the 7 days leading up to the observation point.",
+    importanceWeight: 0.24,
+    signalType: "Positive Driver"
+  },
+  {
+    id: "F02",
+    name: "Week-Over-Week Growth Ratio",
+    category: "Velocity & Acceleration",
+    formula: "growth_ratio = stars_w0 / (stars_w1 + 1)",
+    sparkImplementation: "col('stars_w0') / (lag('stars_w0', 1).over(w_time) + 1)",
+    description: "Relative star acceleration compared to the preceding week; flags rapid inflection curves.",
+    importanceWeight: 0.19,
+    signalType: "Positive Driver"
+  },
+  {
+    id: "F03",
+    name: "Fork-to-Star Conversion Ratio",
+    category: "Developer Utility",
+    formula: "fork_star_ratio = forks_4w / (stars_4w + 1)",
+    sparkImplementation: "sum('daily_forks').over(w_28d) / (sum('daily_stars').over(w_28d) + 1)",
+    description: "Forks reflect real code exploration and execution, penalizing cosmetic social bookmarking.",
+    importanceWeight: 0.15,
+    signalType: "Organic Quality Filter"
+  },
+  {
+    id: "F04",
+    name: "Burstiness / Organic Dispersion Index",
+    category: "Velocity & Acceleration",
+    formula: "burstiness = max_day_stars / (stars_w0 + 1)",
+    sparkImplementation: "max('daily_stars').over(w_7d) / (col('stars_w0') + 1)",
+    description: "Distinguishes sustained organic adoption (<0.35) from artificial bot campaigns or 1-day HackerNews spikes (>0.85).",
+    importanceWeight: 0.12,
+    signalType: "Bot/Hype Penalizer"
+  },
+  {
+    id: "F05",
+    name: "GraphFrames PageRank Centrality",
+    category: "GraphFrames Ecosystem",
+    formula: "PageRank(G_costar, resetProb=0.15, maxIter=10)",
+    sparkImplementation: "GraphFrame(v, e).pageRank(resetProbability=0.15, maxIter=10)",
+    description: "Measures structural authority in the co-stargazer ecosystem; stars from prolific engineers carry higher eigenvector weight.",
+    importanceWeight: 0.11,
+    signalType: "Structural Multiplier"
+  },
+  {
+    id: "F06",
+    name: "Co-Star Community Momentum",
+    category: "GraphFrames Ecosystem",
+    formula: "sum(stars_4w of top 5 bipartite neighbor repos)",
+    sparkImplementation: "edges.join(repo_growth, 'target').groupBy('src').agg(sum('neighbour_growth'))",
+    description: "Measures whether the repository belongs to an expanding technological cluster (e.g., local LLMs, CUDA kernels).",
+    importanceWeight: 0.08,
+    signalType: "Structural Multiplier"
+  },
+  {
+    id: "F07",
+    name: "Pull Requests Merged (4-Week)",
+    category: "Activity & Maintenance",
+    formula: "count(PullRequestEvent where action='closed' and merged=true)",
+    sparkImplementation: "sum('prs_merged_daily').over(Window.partitionBy('repo_id').rowsBetween(-27, 0))",
+    description: "Active development throughput and responsive maintainer review bandwidth.",
+    importanceWeight: 0.07,
+    signalType: "Organic Quality Filter"
+  },
+  {
+    id: "F08",
+    name: "Active Contributor Days (4-Week)",
+    category: "Activity & Maintenance",
+    formula: "count(distinct event_dates with PushEvent or PREvent)",
+    sparkImplementation: "countDistinct(when(col('is_active_day'), col('dt'))).over(w_28d)",
+    description: "Continuity of software development; filters out dormant forks that saw sudden random traffic.",
+    importanceWeight: 0.05,
+    signalType: "Organic Quality Filter"
+  },
+  {
+    id: "F09",
+    name: "Push Commit Volume (4-Week)",
+    category: "Activity & Maintenance",
+    formula: "sum(distinct commit_count) in 28-day window",
+    sparkImplementation: "sum('daily_pushes').over(w_28d)",
+    description: "Raw volume of git commits pushed to the default branch.",
+    importanceWeight: 0.04,
+    signalType: "Organic Quality Filter"
+  },
+  {
+    id: "F10",
+    name: "Cumulative Baseline Stars",
+    category: "Velocity & Acceleration",
+    formula: "stars_cum = lifetime stars at snapshot date",
+    sparkImplementation: "sum('daily_stars').over(Window.partitionBy('repo_id').rowsBetween(Window.unboundedPreceding, 0))",
+    description: "Current repository star size (clamped to 20-300 candidate window).",
+    importanceWeight: 0.04,
+    signalType: "Positive Driver"
+  },
+  {
+    id: "F11",
+    name: "Lag-2 Week Stars (w1)",
+    category: "Velocity & Acceleration",
+    formula: "stars_w1 = count(WatchEvent) in [t-14, t-7]",
+    sparkImplementation: "lag('stars_w0', 1).over(Window.partitionBy('repo_id').orderBy('week_num'))",
+    description: "Velocity trajectory from two weeks prior to establish multi-step trend smoothness.",
+    importanceWeight: 0.03,
+    signalType: "Positive Driver"
+  },
+  {
+    id: "F12",
+    name: "Author Diversity Ratio",
+    category: "Developer Utility",
+    formula: "distinct_committers / total_commits_4w",
+    sparkImplementation: "approx_count_distinct('actor_login').over(w_28d) / (col('pushes_4w') + 1)",
+    description: "Distinguishes community-driven open source projects from single-author prototypes.",
+    importanceWeight: 0.03,
+    signalType: "Organic Quality Filter"
+  },
+  {
+    id: "F13",
+    name: "Issue Closure Velocity",
+    category: "Activity & Maintenance",
+    formula: "issues_closed_4w / (issues_opened_4w + 1)",
+    sparkImplementation: "sum('issues_closed').over(w_28d) / (sum('issues_opened').over(w_28d) + 1)",
+    description: "Efficiency at triaging bug reports and community feedback.",
+    importanceWeight: 0.02,
+    signalType: "Organic Quality Filter"
+  },
+  {
+    id: "F14",
+    name: "Repository Age (Weeks)",
+    category: "Developer Utility",
+    formula: "age_weeks = (snapshot_dt - created_dt) / 7",
+    sparkImplementation: "datediff(col('snapshot_dt'), col('created_dt')) / 7.0",
+    description: "Newer repositories with identical velocity exhibit exponentially higher probability of breakout.",
+    importanceWeight: 0.02,
+    signalType: "Positive Driver"
+  },
+  {
+    id: "F15",
+    name: "Label Propagation Community ID",
+    category: "GraphFrames Ecosystem",
+    formula: "GraphFrames LPA(maxIter=5)",
+    sparkImplementation: "GraphFrame(v, e).labelPropagation(maxIter=5)",
+    description: "Discrete developer subculture clustering (e.g. LLM Serving, Agent Frameworks, Vector DBs).",
+    importanceWeight: 0.02,
+    signalType: "Structural Multiplier"
+  },
+  {
+    id: "F16",
+    name: "Co-Star Degree Centrality",
+    category: "GraphFrames Ecosystem",
+    formula: "degree = count(edges where shared_stargazers >= 3)",
+    sparkImplementation: "GraphFrame(v, e).degrees",
+    description: "Number of high-affinity adjacent repositories sharing multiple cross-stargazers.",
+    importanceWeight: 0.02,
+    signalType: "Structural Multiplier"
+  }
+];
+

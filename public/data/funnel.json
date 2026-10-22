@@ -1,0 +1,50 @@
+[
+  {
+    "stage": "Raw GH Archive",
+    "rows": 1480000000,
+    "size_mb": 1840000,
+    "runtime_s": 0,
+    "grain": "One event per line (18-month historical corpus)",
+    "note": "Uncompressed JSON stream across 18 months of GitHub activity"
+  },
+  {
+    "stage": "Bronze Events (T1)",
+    "rows": 390000000,
+    "size_mb": 114200,
+    "runtime_s": 142.5,
+    "grain": "Filtered event type (Watch, Fork, Create, PR, Issue, Push)",
+    "note": "Parquet zstd columnar storage with explicit schema definition"
+  },
+  {
+    "stage": "Silver Events",
+    "rows": 342000000,
+    "size_mb": 96400,
+    "runtime_s": 280.2,
+    "grain": "Cleaned & bot-filtered event stream",
+    "note": "Dropped automated CI/CD bot accounts; deduplicated first-stars per actor"
+  },
+  {
+    "stage": "Gold: Repo-Day",
+    "rows": 8420000,
+    "size_mb": 1840,
+    "runtime_s": 420.1,
+    "grain": "Repo × Day aggregation",
+    "note": "Pruned repositories with <20 lifetime stars before windowing"
+  },
+  {
+    "stage": "Gold: Repo-Week",
+    "rows": 1280000,
+    "size_mb": 280,
+    "runtime_s": 115.4,
+    "grain": "Repo × Week sparse rollup",
+    "note": "Numeric week_num index enables sparse window features without zero-filling"
+  },
+  {
+    "stage": "Candidate Pool",
+    "rows": 148000,
+    "size_mb": 38.5,
+    "runtime_s": 45.2,
+    "grain": "In-window early repositories (20-300 stars, age <= 26w)",
+    "note": "Final feature matrix fed into MLlib training and evaluation"
+  }
+]

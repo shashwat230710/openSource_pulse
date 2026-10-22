@@ -1,0 +1,34 @@
+[
+  {
+    "id": "A1",
+    "name": "Exponential Viral Spike",
+    "description": "Rapid acceleration crossing 500 stars within 3 weeks of passing 20.",
+    "breakout_rate_pct": 89.4,
+    "share_of_candidates_pct": 6.2,
+    "curve": [5, 12, 35, 120, 450, 1200]
+  },
+  {
+    "id": "A2",
+    "name": "Steady Organic Growth",
+    "description": "Consistent weekly PR merges and stable fork conversion.",
+    "breakout_rate_pct": 64.2,
+    "share_of_candidates_pct": 18.5,
+    "curve": [10, 18, 30, 55, 95, 160]
+  },
+  {
+    "id": "A3",
+    "name": "Hobbyist Plateau",
+    "description": "Initial curiosity followed by flatlining activity.",
+    "breakout_rate_pct": 1.8,
+    "share_of_candidates_pct": 54.1,
+    "curve": [8, 22, 28, 31, 33, 34]
+  },
+  {
+    "id": "A4",
+    "name": "Artificial Bot Spike",
+    "description": "Single-day star anomaly without fork conversion or PRs.",
+    "breakout_rate_pct": 0.4,
+    "share_of_candidates_pct": 21.2,
+    "curve": [4, 6, 210, 212, 213, 213]
+  }
+]

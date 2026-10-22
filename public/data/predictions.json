@@ -1,0 +1,102 @@
+[
+  {
+    "week_start": "2024-02-19",
+    "rank": 1,
+    "repo_name": "astral-sh/uv",
+    "score": 0.982,
+    "stars_cum": 290,
+    "stars_w0": 210,
+    "stars_next_4w": 8400,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 2,
+    "repo_name": "ollama/ollama",
+    "score": 0.964,
+    "stars_cum": 92,
+    "stars_w0": 64,
+    "stars_next_4w": 3680,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 3,
+    "repo_name": "vllm-project/vllm",
+    "score": 0.942,
+    "stars_cum": 184,
+    "stars_w0": 88,
+    "stars_next_4w": 2420,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 4,
+    "repo_name": "ggerganov/llama.cpp",
+    "score": 0.915,
+    "stars_cum": 240,
+    "stars_w0": 95,
+    "stars_next_4w": 1850,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 5,
+    "repo_name": "BerriAI/litellm",
+    "score": 0.884,
+    "stars_cum": 110,
+    "stars_w0": 52,
+    "stars_next_4w": 920,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 6,
+    "repo_name": "crypto-airdrop/free-tokens-2024",
+    "score": 0.820,
+    "stars_cum": 280,
+    "stars_w0": 260,
+    "stars_next_4w": 40,
+    "label": false
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 7,
+    "repo_name": "langfuse/langfuse",
+    "score": 0.792,
+    "stars_cum": 85,
+    "stars_w0": 38,
+    "stars_next_4w": 640,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 8,
+    "repo_name": "phidatahq/phidata",
+    "score": 0.765,
+    "stars_cum": 95,
+    "stars_w0": 41,
+    "stars_next_4w": 710,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 9,
+    "repo_name": "qdrant/fastembed",
+    "score": 0.741,
+    "stars_cum": 78,
+    "stars_w0": 34,
+    "stars_next_4w": 520,
+    "label": true
+  },
+  {
+    "week_start": "2024-02-19",
+    "rank": 10,
+    "repo_name": "hobbyist/stalled-demo",
+    "score": 0.680,
+    "stars_cum": 45,
+    "stars_w0": 8,
+    "stars_next_4w": 15,
+    "label": false
+  }
+]

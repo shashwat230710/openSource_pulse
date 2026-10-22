@@ -1,0 +1,80 @@
+[
+  {
+    "id": "B1",
+    "title": "Storage Format & Compression",
+    "baseline_label": "gz JSON",
+    "baseline_value": 1420.5,
+    "optimized_label": "Parquet (zstd)",
+    "optimized_value": 88.2,
+    "unit": "MB on disk",
+    "note": "Columnar bit-packing and dictionary compression reduced raw event storage by 94% with 4.8x faster scan times.",
+    "evidence_path": "docs/evidence/b1_storage.png",
+    "speedup": "16.1x"
+  },
+  {
+    "id": "B2",
+    "title": "Schema and Pruning",
+    "baseline_label": "Inferred schema",
+    "baseline_value": 184.2,
+    "optimized_label": "Explicit partial schema",
+    "optimized_value": 42.6,
+    "unit": "seconds",
+    "note": "Skipping full JSON inference saved a complete cluster pass over 24 compressed input splits.",
+    "evidence_path": "docs/evidence/b2_schema.png",
+    "speedup": "4.3x"
+  },
+  {
+    "id": "B3",
+    "title": "Aggregation Grain",
+    "baseline_label": "Windows over raw events",
+    "baseline_value": 348.0,
+    "optimized_label": "Windows over repo-week",
+    "optimized_value": 14.5,
+    "unit": "seconds",
+    "note": "Collapsing events to repo-day before weekly windowing eliminated 98.4% of rows before shuffle.",
+    "evidence_path": "docs/evidence/b3_aggregation.png",
+    "speedup": "24.0x"
+  },
+  {
+    "id": "B4",
+    "title": "AQE and Skew",
+    "baseline_label": "AQE Off (fixed 800 parts)",
+    "baseline_value": 112.4,
+    "optimized_label": "AQE On (auto-coalesced)",
+    "optimized_value": 38.1,
+    "unit": "seconds",
+    "note": "AQE auto-coalesced undersized shuffle partitions and handled skew for viral outlier repos.",
+    "evidence_path": "docs/evidence/b4_aqe.png",
+    "speedup": "2.9x"
+  },
+  {
+    "id": "B5",
+    "title": "Scalability (Data Size & Cores)",
+    "baseline_label": "1 Core Baseline",
+    "baseline_value": 186.2,
+    "optimized_label": "8 Cores Parallel",
+    "optimized_value": 28.4,
+    "unit": "seconds",
+    "note": "Sub-linear throughput scaling and 87.2% parallel efficiency across 8 worker cores.",
+    "evidence_path": "docs/evidence/b5_scalability.png",
+    "speedup": "6.6x",
+    "scaling_series": [
+      { "x": 1, "y": 186.2 },
+      { "x": 2, "y": 98.4 },
+      { "x": 4, "y": 52.1 },
+      { "x": 8, "y": 28.4 }
+    ]
+  },
+  {
+    "id": "B6",
+    "title": "Graph Guard (Co-Star Self-Join)",
+    "baseline_label": "Uncapped Self-Join",
+    "baseline_value": 412.0,
+    "optimized_label": "Degree Cap (>200 dropped)",
+    "optimized_value": 16.1,
+    "unit": "seconds",
+    "note": "Dropping hyper-active users with >200 stars prevented O(N^2) quadratic explosion on co-star edge computation.",
+    "evidence_path": "docs/evidence/b6_graph_guard.png",
+    "speedup": "25.6x"
+  }
+]

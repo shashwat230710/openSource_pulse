@@ -1,0 +1,72 @@
+[
+  {
+    "id": "M0",
+    "name": "Growth-Ratio Baseline",
+    "role": "Simple heuristic baseline (w0/w1 ratio threshold)",
+    "pr_auc": 0.312,
+    "roc_auc": 0.620,
+    "p_at_20": 0.400,
+    "p_at_50": 0.340,
+    "p_at_100": 0.280,
+    "avg_lead_time_weeks": 1.2,
+    "features": ["growth_ratio"],
+    "importances": { "growth_ratio": 1.0 }
+  },
+  {
+    "id": "M1",
+    "name": "Logistic Regression",
+    "role": "Linear feature combination baseline",
+    "pr_auc": 0.428,
+    "roc_auc": 0.710,
+    "p_at_20": 0.550,
+    "p_at_50": 0.480,
+    "p_at_100": 0.410,
+    "avg_lead_time_weeks": 2.1,
+    "features": ["growth_ratio", "fork_star_ratio", "burstiness", "prs_merged_4w"],
+    "importances": {
+      "growth_ratio": 0.42,
+      "fork_star_ratio": 0.31,
+      "prs_merged_4w": 0.18,
+      "burstiness": 0.09
+    }
+  },
+  {
+    "id": "M2",
+    "name": "Gradient-Boosted Trees (GBT)",
+    "role": "Non-linear feature interactions (depth=6, maxIter=120)",
+    "pr_auc": 0.548,
+    "roc_auc": 0.795,
+    "p_at_20": 0.700,
+    "p_at_50": 0.620,
+    "p_at_100": 0.540,
+    "avg_lead_time_weeks": 3.0,
+    "features": ["growth_ratio", "fork_star_ratio", "burstiness", "prs_merged_4w", "active_days_4w"],
+    "importances": {
+      "growth_ratio": 0.38,
+      "fork_star_ratio": 0.28,
+      "burstiness": 0.18,
+      "prs_merged_4w": 0.11,
+      "active_days_4w": 0.05
+    }
+  },
+  {
+    "id": "M3",
+    "name": "GBT + GraphFrames Centrality",
+    "role": "Full model incorporating PageRank and Community Momentum",
+    "pr_auc": 0.614,
+    "roc_auc": 0.834,
+    "p_at_20": 0.800,
+    "p_at_50": 0.720,
+    "p_at_100": 0.640,
+    "avg_lead_time_weeks": 3.4,
+    "features": ["growth_ratio", "fork_star_ratio", "burstiness", "prs_merged_4w", "pagerank", "community_momentum"],
+    "importances": {
+      "growth_ratio": 0.32,
+      "pagerank": 0.24,
+      "fork_star_ratio": 0.21,
+      "community_momentum": 0.12,
+      "burstiness": 0.07,
+      "prs_merged_4w": 0.04
+    }
+  }
+]

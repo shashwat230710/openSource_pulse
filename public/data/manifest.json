@@ -1,0 +1,23 @@
+{
+  "run_id": "run_t1_2024_03_spark35",
+  "generated_at": "2024-03-31T23:45:00Z",
+  "git_commit": "7a8f9c2",
+  "spark_version": "3.5.1",
+  "cores": 8,
+  "driver_memory": "12GB",
+  "tier": "T1 (Jan 1 - Mar 31, 2024)",
+  "date_range": "2024-01-01 to 2024-03-31",
+  "hours_ingested": 2184,
+  "raw_events": 390000000,
+  "raw_size_gb": 114.2,
+  "parquet_size_gb": 7.1,
+  "compression_ratio": 16.1,
+  "bot_share_pct": 12.4,
+  "duplicate_star_pct": 3.8,
+  "base_rate_breakout_pct": 0.86,
+  "gini_coefficient": 0.78,
+  "unique_actors_exact": 1428590,
+  "unique_actors_hll": 1424100,
+  "hll_error_pct": 0.31,
+  "hll_runtime_s": 4.2
+}

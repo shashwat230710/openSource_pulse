@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    { "id": "vllm", "name": "vllm-project/vllm", "community": "High-Performance LLM Serving", "pagerank": 0.088, "stars_cum": 184, "x": 220, "y": 110 },
+    { "id": "ollama", "name": "ollama/ollama", "community": "High-Performance LLM Serving", "pagerank": 0.094, "stars_cum": 92, "x": 360, "y": 100 },
+    { "id": "llamacpp", "name": "ggerganov/llama.cpp", "community": "High-Performance LLM Serving", "pagerank": 0.105, "stars_cum": 320, "x": 290, "y": 200 },
+    { "id": "whisper", "name": "openai/whisper", "community": "Edge & C/C++ AI Systems", "pagerank": 0.072, "stars_cum": 140, "x": 160, "y": 260 },
+    { "id": "litellm", "name": "BerriAI/litellm", "community": "Agents & API Gateways", "pagerank": 0.068, "stars_cum": 110, "x": 500, "y": 160 },
+    { "id": "langfuse", "name": "langfuse/langfuse", "community": "Agents & API Gateways", "pagerank": 0.061, "stars_cum": 85, "x": 620, "y": 140 },
+    { "id": "phidata", "name": "phidatahq/phidata", "community": "Agents & API Gateways", "pagerank": 0.055, "stars_cum": 95, "x": 590, "y": 250 },
+    { "id": "fastembed", "name": "qdrant/fastembed", "community": "Vector & Search", "pagerank": 0.048, "stars_cum": 78, "x": 390, "y": 310 },
+    { "id": "qdrant", "name": "qdrant/qdrant", "community": "Vector & Search", "pagerank": 0.082, "stars_cum": 210, "x": 470, "y": 340 },
+    { "id": "chroma", "name": "chroma-core/chroma", "community": "Vector & Search", "pagerank": 0.079, "stars_cum": 190, "x": 340, "y": 360 },
+    { "id": "uv", "name": "astral-sh/uv", "community": "Edge & C/C++ AI Systems", "pagerank": 0.112, "stars_cum": 290, "x": 140, "y": 160 },
+    { "id": "ruff", "name": "astral-sh/ruff", "community": "Edge & C/C++ AI Systems", "pagerank": 0.125, "stars_cum": 300, "x": 80, "y": 120 }
+  ],
+  "edges": [
+    { "source": "vllm", "target": "llamacpp", "weight": 38 },
+    { "source": "vllm", "target": "ollama", "weight": 31 },
+    { "source": "ollama", "target": "llamacpp", "weight": 44 },
+    { "source": "vllm", "target": "litellm", "weight": 18 },
+    { "source": "litellm", "target": "langfuse", "weight": 24 },
+    { "source": "litellm", "target": "phidata", "weight": 19 },
+    { "source": "fastembed", "target": "qdrant", "weight": 36 },
+    { "source": "qdrant", "target": "chroma", "weight": 28 },
+    { "source": "uv", "target": "ruff", "weight": 64 },
+    { "source": "whisper", "target": "llamacpp", "weight": 22 }
+  ]
+}

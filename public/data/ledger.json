@@ -1,0 +1,25 @@
+{
+  "total_files": 2184,
+  "malformed_rows_total": 0,
+  "event_mix": [
+    { "type": "WatchEvent (Stars)", "share_pct": 42.1, "count": 164190000 },
+    { "type": "PushEvent", "share_pct": 28.4, "count": 110760000 },
+    { "type": "CreateEvent", "share_pct": 14.2, "count": 55380000 },
+    { "type": "IssuesEvent", "share_pct": 7.8, "count": 30420000 },
+    { "type": "PullRequestEvent", "share_pct": 5.2, "count": 20280000 },
+    { "type": "ForkEvent", "share_pct": 2.3, "count": 8970000 }
+  ],
+  "anomalous_hours": [
+    { "hour": "2024-01-14 03:00", "z_score": 4.21, "reason": "GitHub API webhook batch retry storm" },
+    { "hour": "2024-02-08 19:00", "z_score": 3.85, "reason": "Major AI model release traffic spike" },
+    { "hour": "2024-03-02 11:00", "z_score": -3.42, "reason": "Upstream GH Archive collection lag" }
+  ],
+  "retention_stages": [
+    { "stage": "Raw GH Archive", "rows": 1480000000, "retention_pct": 100.0 },
+    { "stage": "Bronze Events", "rows": 390000000, "retention_pct": 26.3 },
+    { "stage": "Silver Events", "rows": 342000000, "retention_pct": 23.1 },
+    { "stage": "Gold Repo-Day", "rows": 8420000, "retention_pct": 0.57 },
+    { "stage": "Gold Repo-Week", "rows": 1280000, "retention_pct": 0.086 },
+    { "stage": "Candidate Pool", "rows": 148000, "retention_pct": 0.010 }
+  ]
+}
